@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 37 39% 93%;
+    --foreground: 0 0% 17%;
+    --card: 40 30% 96%;
+    --card-foreground: 0 0% 17%;
+    --popover: 40 30% 96%;
+    --popover-foreground: 0 0% 17%;
+    --primary: 0 38% 27%;
+    --primary-foreground: 37 39% 93%;
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 37 39% 93%;
+    --muted: 37 18% 86%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 38 32% 60%;
+    --accent-foreground: 0 0% 17%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 37 18% 83%;
+    --input: 37 18% 83%;
+    --ring: 38 32% 60%;
+    --radius: 0.5rem;
+
+    --gold: 38 32% 60%;
+    --burgundy: 0 38% 27%;
+    --charcoal: 0 0% 17%;
+    --cream: 37 39% 93%;
+
+    --sidebar-background: 0 0% 17%;
+    --sidebar-foreground: 37 39% 93%;
+    --sidebar-primary: 0 38% 27%;
+    --sidebar-primary-foreground: 37 39% 93%;
+    --sidebar-accent: 38 32% 60%;
+    --sidebar-accent-foreground: 0 0% 17%;
+    --sidebar-border: 0 0% 25%;
+    --sidebar-ring: 38 32% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .hero-gradient {
+    background: linear-gradient(135deg, hsl(0 0% 17%), hsl(0 38% 27%));
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(225deg, hsl(0 38% 27% / 0.6), hsl(0 0% 10% / 0.9));
+    animation: gradientPulse 8s ease-in-out infinite;
+  }
+
+  @keyframes gradientPulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  @keyframes particle {
+    0% { opacity: 0; transform: translateY(0) scale(0); }
+    50% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-100px) scale(1); }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .page-bg-overlay {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+
+  .page-bg-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: hsl(0 0% 17% / 0.82);
+    z-index: 0;
+  }
+
+  .page-bg-overlay > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .gold-glow {
+    text-shadow: 0 0 30px hsl(38 32% 60% / 0.4);
+  }
+
+  .drop-cap::first-letter {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5em;
+    float: left;
+    line-height: 0.8;
+    margin-right: 0.1em;
+    color: hsl(0 38% 27%);
+    font-weight: 700;
+  }
+
+  .star-filled {
+    color: hsl(38 32% 60%);
+  }
+
+  .star-empty {
+    color: hsl(37 18% 83%);
+  }
+}
