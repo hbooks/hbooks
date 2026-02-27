@@ -24,22 +24,46 @@ const Contact = () => {
     setSubmitting(true);
     setError('');
 
-    const { error: err } = await supabase.from('contact_messages').insert({
+    // 1. Insert into Supabase
+    const { error: insertError } = await supabase.from('contact_messages').insert({
       name: name.trim(),
       email: email.trim(),
       message: message.trim(),
     });
 
-    setSubmitting(false);
-    if (err) {
+    if (insertError) {
       setError('Something went wrong. Please try again.');
-    } else {
-      setSuccess(true);
-      setName('');
-      setEmail('');
-      setMessage('');
-      setTimeout(() => setSuccess(false), 5000);
+      setSubmitting(false);
+      return;
     }
+
+    // 2. Call Edge Function to send auto‑reply email
+    try {
+      const response = await fetch(
+        'https://xwomtgvefbshvzgddnig.supabase.co/functions/v1/send-autoreply',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim(),
+          }),
+        }
+      );
+      if (!response.ok) {
+        console.error('Auto‑reply failed:', await response.text());
+      }
+    } catch (notifyErr) {
+      console.error('Auto‑reply error:', notifyErr);
+    }
+
+    // 3. Clear form and show success
+    setSubmitting(false);
+    setSuccess(true);
+    setName('');
+    setEmail('');
+    setMessage('');
+    setTimeout(() => setSuccess(false), 5000);
   };
 
   return (
