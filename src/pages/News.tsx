@@ -45,20 +45,17 @@ const News = () => {
   }, []);
 
 const handleLike = async (title: string) => {
-  // Optimistic update
   setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) + 1 }));
 
-  const { data, error } = await supabase.rpc('increment_like', { news_title: title });
+  const { data, error } = await supabase.rpc('increment_like', { p_news_title: title });
 
   if (error) {
     console.error('Like error:', error);
-    // Revert optimistic update on error
     setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) - 1 }));
   } else if (typeof data === 'number') {
     setLikes(prev => ({ ...prev, [title]: data }));
   }
 };
-
   return (
     <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4">
       <div className="container mx-auto max-w-3xl">
