@@ -54,16 +54,16 @@ const Books = () => {
                   Buy from your favourite store
                 </a>
               </Button>
-              
-              <Button 
-                variant="hero" 
-                size="lg" 
+
+              <Button
+                variant="hero"
+                size="lg"
                 asChild
                 className="text-lg px-10 py-6 flex-1 bg-accent/10 hover:bg-accent/20 border border-accent/30"
               >
-                <a 
-                  href="https://preview.mailerlite.io/forms/2154875/180842715123025820/share" 
-                  target="_blank" 
+                <a
+                  href="https://preview.mailerlite.io/forms/2154875/180842715123025820/share"
+                  target="_blank"
                   rel="noopener noreferrer"
                 >
                   Sign up for exclusive scenes
@@ -92,10 +92,6 @@ const Books = () => {
         </div>
       </div>
     </main>
-  );
-};
-
-export default Books;
   );
 };
 
