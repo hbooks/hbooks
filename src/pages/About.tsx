@@ -1,8 +1,7 @@
 import { User, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-// Declare ml for TypeScript
 declare global {
   interface Window {
     ml: any;
@@ -10,33 +9,53 @@ declare global {
 }
 
 const About = () => {
-  // Add MailerLite universal tracking script
+  const scriptLoaded = useRef(false);
+
+  // Load MailerLite universal script
   useEffect(() => {
-    // Only load on client side
-    if (typeof window !== 'undefined' && !window.ml) {
-      (function(w: any, d: Document, e: string, u: string, f: string, l: HTMLElement | null, n: any) {
-        w[f] = w[f] || function() {
-          (w[f].q = w[f].q || []).push(arguments);
-        };
-        l = d.createElement(e);
-        l.async = 1;
-        l.src = u;
-        n = d.getElementsByTagName(e)[0];
-        n.parentNode?.insertBefore(l, n);
-      })(window, document, 'script', 'https://assets.mailerlite.com/js/universal.js', 'ml');
-      
-      // Initialize with your account ID (from your form URL: 2154875)
-      window.ml('account', '2154875');
+    if (typeof window === 'undefined' || window.ml) {
+      scriptLoaded.current = true;
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = 'https://assets.mailerlite.com/js/universal.js';
+    script.async = true;
+    script.onload = () => {
+      // Initialize with your account ID (from form URL: 2154875)
+      if (window.ml) {
+        window.ml('account', '2154875');
+        scriptLoaded.current = true;
+        console.log('MailerLite loaded');
+      }
+    };
+    script.onerror = () => {
+      console.error('Failed to load MailerLite script');
+      scriptLoaded.current = false;
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup not strictly necessary
+    };
   }, []);
 
   const handleNewsletterClick = () => {
-    if (window.ml) {
-      window.ml('show', 'VAGpUt', true);
+    // Form ID from your button code
+    const formId = 'VAGpUt';
+    // Fallback URL (your form's direct link)
+    const fallbackUrl = 'https://preview.mailerlite.io/forms/2154875/180842715123025820/share';
+
+    if (window.ml && scriptLoaded.current) {
+      try {
+        window.ml('show', formId, true);
+      } catch (e) {
+        console.error('MailerLite show failed', e);
+        window.open(fallbackUrl, '_blank');
+      }
     } else {
-      console.error('MailerLite not loaded');
-      // Fallback - open form URL directly
-      window.open('https://preview.mailerlite.io/forms/2154875/180842715123025820/share', '_blank');
+      // Script not loaded, open fallback
+      window.open(fallbackUrl, '_blank');
     }
   };
 
