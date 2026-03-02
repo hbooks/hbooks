@@ -20,14 +20,6 @@ const Books = () => {
       });
   }, []);
 
-  const handleNewsletterClick = () => {
-    if (window.ml) {
-      window.ml('show', 'VAGpUt', true);
-    } else {
-      window.open('https://preview.mailerlite.io/forms/2154875/180842715123025820/share', '_blank');
-    }
-  };
-
   return (
     <main className="min-h-screen bg-secondary text-secondary-foreground">
       <div className="container mx-auto px-4 py-16">
@@ -66,15 +58,18 @@ const Books = () => {
               <Button 
                 variant="hero" 
                 size="lg" 
-                onClick={handleNewsletterClick}
+                asChild
                 className="text-lg px-10 py-6 flex-1 bg-accent/10 hover:bg-accent/20 border border-accent/30"
               >
-                Sign up for deleted scenes
+                <a 
+                  href="https://preview.mailerlite.io/forms/2154875/180842715123025820/share" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  Sign up for exclusive scenes
+                </a>
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground mt-2 text-center sm:text-left">
-              One scene. Cut for pacing. Too raw to delete forever.
-            </p>
 
             {/* Praise Section */}
             {praise && (
@@ -97,6 +92,10 @@ const Books = () => {
         </div>
       </div>
     </main>
+  );
+};
+
+export default Books;
   );
 };
 
