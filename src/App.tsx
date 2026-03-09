@@ -12,6 +12,8 @@ import About from "./pages/About";
 import Books from "./pages/Books";
 import News from "./pages/News";
 import Reviews from "./pages/Reviews";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
 import Support from "./pages/Support";
 import Library from "./pages/Library";
@@ -30,16 +32,19 @@ const App = () => {
         <BrowserRouter>
           <Navbar onAdminTrigger={() => setShowAdmin(true)} />
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/books" element={<Books />} />
-            <Route path="/news" element={<News />} />
-            <Route path="/reviews" element={<Reviews />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/library" element={<Library />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+  <Route path="/" element={<Index />} />
+  <Route path="/about" element={<About />} />
+  <Route path="/books" element={<Books />} />
+  <Route path="/news" element={<News />} />
+  <Route path="/reviews" element={<Reviews />} />
+  <Route path="/contact" element={<Contact />} />
+  <Route path="/support" element={<Support />} />
+  <Route path="/library" element={<Library />} />
+  {/* New routes */}
+  <Route path="/privacy" element={<Privacy />} />
+  <Route path="/terms" element={<Terms />} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
           <Footer />
           <AdminPortal isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
         </BrowserRouter>
