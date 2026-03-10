@@ -17,6 +17,7 @@ import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
 import Support from "./pages/Support";
 import Library from "./pages/Library";
+import ThankYou from "./pages/ThankYou";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => {
   <Route path="/support" element={<Support />} />
   <Route path="/library" element={<Library />} />
   {/* New routes */}
+  <Route path="/thankyoupage" element={<ThankYou />} />
   <Route path="/privacy" element={<Privacy />} />
   <Route path="/terms" element={<Terms />} />
   <Route path="*" element={<NotFound />} />
