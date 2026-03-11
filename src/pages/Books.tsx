@@ -147,6 +147,7 @@ const Books = () => {
                   Stay Here
                 </Button>
                 <Button
+                  variant="hero"
                   onClick={handleContinueToStore}
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
