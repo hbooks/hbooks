@@ -140,7 +140,7 @@ const Books = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-end">
                 <Button
-                  variant="outline"
+                  variant="hero"
                   onClick={() => setShowBuyModal(false)}
                   className="border-border hover:bg-accent/10"
                 >
