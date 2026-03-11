@@ -12,10 +12,26 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger()
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    // Disable source maps in production – prevents readable code in DevTools
+    sourcemap: false,
+    // Minify output (default is true, but we're being explicit)
+    minify: true,
+    // Optional: use terser for even better minification and to remove console logs
+    // minify: 'terser',
+    // terserOptions: {
+    //   compress: {
+    //     drop_console: true, // removes console.log statements in production
+    //   },
+    // },
   },
 }));
