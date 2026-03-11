@@ -44,7 +44,7 @@ const Navbar = ({ onAdminTrigger }: NavbarProps) => {
           onClick={handleLogoClick}
           className="font-display text-2xl font-bold tracking-widest text-accent select-none"
         >
-          hb00ks
+          hpbooks
         </button>
 
         <button
