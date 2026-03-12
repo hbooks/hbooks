@@ -38,7 +38,7 @@ const Helpline = () => {
       icon: ShoppingBag,
       title: "Purchasing Exclusive Digital Content",
       steps: [
-        "Visit the 'Shop' page via the main menu (if available) or the 'One-time visitor' path from our recruitment site.",
+        "Visit our 'Shop' page via the Buy Exclusive scenes on the footer. Select the 'One-time visitor' path from our recruitment site.",
         "Browse the available items: Chapter Leaks, Behind the Scenes, Deleted Scenes Collection.",
         "Click 'View on Ko-fi' for the item you want. A pop-up modal will open with the Ko-fi product page.",
         "Complete your purchase on Ko-fi. You'll receive a download link immediately."
@@ -67,7 +67,7 @@ const Helpline = () => {
             Site Guide & Helpline
           </h1>
           <p className="text-muted-foreground text-lg">
-            Your roadmap to navigating hb00ks and getting the most out of your experience.
+            Your roadmap to navigating hpbooks and getting the most out of your experience.
           </p>
         </div>
 
