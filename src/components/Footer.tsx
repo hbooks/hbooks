@@ -75,10 +75,10 @@ const Footer = () => (
 
       {/* Copyright */}
           <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-        All rights reserved. Made with <Heart size={12} className="text-accent" /> for stories.
+      Made with <Heart size={12} className="text-accent" /> for stories.
       </p>
       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-        © 2026 hb00ks / H00man Publisher. 
+      © 2026 hb00ks / H00man Publisher. All rights reserved.
       </p>
     </div>
   </footer>
