@@ -60,7 +60,7 @@ const Footer = () => (
         </a>
         <span>|</span>
         <a href="/helpline" className="hover:text-accent transition-colors">
-          Site Guide
+          Help
         </a>
         <span>|</span>
         <a
