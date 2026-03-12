@@ -24,7 +24,7 @@ const ThankYou = () => {
 
           {/* Simple Supportive Message */}
           <p className="text-lg text-muted-foreground mb-12 max-w-lg mx-auto">
-            Check your inbox to confirm your email. Then get ready for exclusive content straight from the Inner Circle.
+            Check your inbox to confirm your email. Then get ready for exclusive content which you signed up for straight from the Inner Circle.
           </p>
 
           {/* Big Clear Button */}
