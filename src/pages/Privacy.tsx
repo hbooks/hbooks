@@ -119,8 +119,8 @@ const Privacy = () => {
             <div className="flex flex-col space-y-3 pl-2">
               <div className="flex items-center gap-3">
                 <Mail size={18} className="text-accent" />
-                <a href="mailto:h00manpublishers@gmail.com" className="hover:text-accent transition-colors">
-                  h00manpublishers@gmail.com
+                <a href="mailto:contact@hpbooks.uk" className="hover:text-accent transition-colors">
+                  contact@hpbooks.uk
                 </a>
               </div>
               <div className="flex items-center gap-3">
