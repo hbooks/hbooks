@@ -31,7 +31,7 @@ const FAQ = () => {
         },
         {
           q: "Is my email safe with you?",
-          a: "Absolutely. We use MailerLite to manage our emails and will never sell or share your information. You can unsubscribe from any email with one click. For more details, please see our Privacy Policy."
+          a: "Absolutely. We will never sell or share your information. You can unsubscribe from any email with one click. For more details, please see our Privacy Policy."
         },
         {
           q: "How can I join the Discord community?",
