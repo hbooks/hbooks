@@ -4,6 +4,16 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import bookCover from '@/assets/gilded-cage-cover.png';
 
+// Extend Window for Sender's explicit API
+declare global {
+  interface Window {
+    senderForms?: {
+      render: (formIds: string[], config?: { initialStatus?: string }) => void;
+    };
+    senderFormsLoaded?: boolean;
+  }
+}
+
 const Books = () => {
   const [praise, setPraise] = useState<{ reviewer_name: string; review_text: string; rating: number } | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
@@ -19,6 +29,27 @@ const Books = () => {
       .then(({ data }) => {
         if (data) setPraise(data);
       });
+  }, []);
+
+  // Sender explicit rendering
+  useEffect(() => {
+    // Replace with your actual popup form ID from your new Sender account
+    const FORM_ID = 'b2kwyJ';
+
+    const renderSenderForms = () => {
+      if (window.senderForms && window.senderForms.render) {
+        window.senderForms.render([FORM_ID], { initialStatus: 'enabled' });
+        console.log('Sender popup rendered');
+      }
+    };
+
+    if (window.senderFormsLoaded) {
+      renderSenderForms();
+    } else {
+      const handleReady = () => renderSenderForms();
+      window.addEventListener('onSenderFormsLoaded', handleReady);
+      return () => window.removeEventListener('onSenderFormsLoaded', handleReady);
+    }
   }, []);
 
   const handleBuyClick = (e: React.MouseEvent) => {
@@ -69,6 +100,7 @@ const Books = () => {
                 Buy from your favourite store
               </Button>
 
+              {/* Sign-up button with id for Sender popup */}
               <Button
                 id="signup-trigger"
                 variant="hero"
