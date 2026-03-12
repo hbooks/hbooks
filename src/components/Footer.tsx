@@ -46,15 +46,15 @@ const Footer = () => (
       </div>
 
       {/* Legal Links */}
-      <div className="flex justify-center gap-4 text-xs text-muted-foreground mb-2">
-        <a href="/privacy" className="hover:text-accent transition-colors">
-          Privacy Policy
-        </a>
-        <span>|</span>
-        <a href="/terms" className="hover:text-accent transition-colors">
-          Terms of Service
-        </a>
-      </div>
+      <div className="flex justify-center gap-4 text-xs text-muted-foreground mb-2 flex-wrap">
+  <a href="/privacy" className="hover:text-accent transition-colors">Privacy Policy</a>
+  <span>|</span>
+  <a href="/terms" className="hover:text-accent transition-colors">Terms of Service</a>
+  <span>|</span>
+  <a href="/faq" className="hover:text-accent transition-colors">FAQ</a>
+  <span>|</span>
+  <a href="/helpline" className="hover:text-accent transition-colors">Help</a>
+</div>
 
       {/* Copyright */}
       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
