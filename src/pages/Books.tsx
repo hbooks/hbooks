@@ -4,17 +4,9 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import bookCover from '@/assets/gilded-cage-cover.png';
 
-// Extend Window to include ml
-declare global {
-  interface Window {
-    ml?: any;
-  }
-}
-
 const Books = () => {
   const [praise, setPraise] = useState<{ reviewer_name: string; review_text: string; rating: number } | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
-  const [showSignupModal, setShowSignupModal] = useState(false);
 
   useEffect(() => {
     supabase
@@ -32,19 +24,6 @@ const Books = () => {
   const handleBuyClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowBuyModal(true);
-  };
-
-  const handleSignupClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    // Open MailerLite popup directly
-    if (window.ml) {
-      window.ml('show', 'BPQnm2', true);
-    } else {
-      // Fallback if MailerLite not loaded
-      window.open('https://preview.mailerlite.io/forms/2154875/180842715123025820/share', '_blank');
-    }
-    // Optionally show a modal with instructions instead of opening directly
-    // setShowSignupModal(true);
   };
 
   const handleContinueToStore = () => {
@@ -91,9 +70,9 @@ const Books = () => {
               </Button>
 
               <Button
+                id="signup-trigger"
                 variant="hero"
                 size="lg"
-                onClick={handleSignupClick}
                 className="text-lg px-10 py-6 flex-1 bg-accent text-accent-foreground hover:bg-accent/90 border-0 font-bold shadow-lg cursor-pointer"
               >
                 Sign up for exclusive scenes
