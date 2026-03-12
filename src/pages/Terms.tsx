@@ -31,7 +31,7 @@ const Terms = () => {
               Agreement to Terms
             </h2>
             <p className="leading-relaxed">
-              Welcome to the website of Raphael M. Mwaura and H00man Publishers. By accessing or using our website at <strong>hbooks-98a.pages.dev</strong>, you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any part of these terms, you may not access the site.
+              Welcome to the website of Raphael M. Mwaura and H00man Publishers. By accessing or using our website at <strong>hpbooks.uk/</strong>, you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any part of these terms, you may not access the site.
             </p>
           </section>
 
