@@ -1,5 +1,5 @@
+import { HelpCircle } from 'lucide-react';
 import { useState } from 'react';
-import { HelpCircle, ChevronDown } from 'lucide-react';
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -90,25 +90,20 @@ const FAQ = () => {
                     <div key={qIndex} className="p-6">
                       <button
                         onClick={() => toggleQuestion(globalIndex)}
-                        className="flex justify-between items-center w-full text-left focus:outline-none group"
+                        className="flex justify-between items-center w-full text-left"
                       >
-                        <h3 className="font-display text-lg text-cream group-hover:text-accent transition-colors pr-8">
+                        <h3 className="font-display text-lg text-cream">
                           {faq.q}
                         </h3>
-                        <ChevronDown
-                          size={20}
-                          className={`text-accent transform transition-transform duration-300 flex-shrink-0 ${
-                            openIndex === globalIndex ? 'rotate-180' : ''
-                          }`}
-                        />
+                        <span className="text-accent text-xl ml-4">
+                          {openIndex === globalIndex ? '−' : '+'}
+                        </span>
                       </button>
-                      <div
-                        className={`mt-4 text-muted-foreground leading-relaxed transition-all duration-300 overflow-hidden ${
-                          openIndex === globalIndex ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                        }`}
-                      >
-                        <p>{faq.a}</p>
-                      </div>
+                      {openIndex === globalIndex && (
+                        <div className="mt-4 text-muted-foreground leading-relaxed">
+                          <p>{faq.a}</p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
