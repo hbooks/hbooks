@@ -75,7 +75,7 @@ const Contact = () => {
           <p className="text-cream opacity-80">
             For comments, inquiries, or just to say hello:
           </p>
-          <p className="text-accent font-semibold mt-2">commentsinquiries@gmail.com</p>
+          <p className="text-accent font-semibold mt-2">inquiries@hpbooks.uk</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-card text-card-foreground p-8 rounded-lg shadow-md space-y-4">
