@@ -122,8 +122,8 @@ const Terms = () => {
             </p>
             <div className="flex items-center gap-3 pl-2">
               <Mail size={18} className="text-accent" />
-              <a href="mailto:h00manpublishers@gmail.com" className="hover:text-accent transition-colors">
-                h00manpublishers@gmail.com
+              <a href="mailto:contact@hpbooks.uk" className="hover:text-accent transition-colors">
+                contact@hpbooks.uk
               </a>
             </div>
           </section>
