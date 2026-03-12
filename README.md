@@ -1,8 +1,6 @@
-# hb00ks – Author Website for Raphael M. Mwaura
+# hb00ks – Author Website 
 
 Welcome to the official repository for **hb00ks**, the author website of **Raphael M. Mwaura**. This site showcases his debut novel *The Gilded Cage*, provides news and updates, and allows readers to connect, leave reviews, and support his work.
-
-🔗 **Live site:** [https://hbooks-98a.pages.dev](https://hbooks-98a.pages.dev)
 
 ---
 
@@ -37,11 +35,3 @@ Welcome to the official repository for **hb00ks**, the author website of **Rapha
 - Node.js (v18 or higher) and npm installed
 - A Supabase account and project (free tier works)
 - Git
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/hbooks/hbooks.git
-   cd hbooks
