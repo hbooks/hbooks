@@ -90,9 +90,11 @@ const FAQ = () => {
                     <div key={qIndex} className="p-6">
                       <button
                         onClick={() => toggleQuestion(globalIndex)}
-                        className="flex justify-between items-center w-full text-left focus:outline-none"
+                        className="flex justify-between items-center w-full text-left focus:outline-none group"
                       >
-                        <h3 className="font-display text-lg text-cream pr-8">{faq.q}</h3>
+                        <h3 className="font-display text-lg text-cream group-hover:text-accent transition-colors pr-8">
+                          {faq.q}
+                        </h3>
                         <ChevronDown
                           size={20}
                           className={`text-accent transform transition-transform duration-300 flex-shrink-0 ${
