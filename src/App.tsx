@@ -18,6 +18,8 @@ import Contact from "./pages/Contact";
 import Support from "./pages/Support";
 import ThankYou from "./pages/ThankYou";
 import Library from "./pages/Library";
+import FAQ from "./pages/FAQ";
+import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,8 @@ const App = () => {
   <Route path="/thankyoupage" element={<ThankYou />} />
   <Route path="/privacy" element={<Privacy />} />
   <Route path="/terms" element={<Terms />} />
+    <Route path="/faq" element={<FAQ />} />
+<Route path="/helpline" element={<Helpline />} />
   <Route path="*" element={<NotFound />} />
 </Routes>
           <Footer />
