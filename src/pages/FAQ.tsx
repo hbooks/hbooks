@@ -63,27 +63,27 @@ const FAQ = () => {
   };
 
   return (
-    <main className="min-h-screen bg-secondary text-secondary-foreground">
+    <main className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-16 max-w-4xl">
         <div className="text-center mb-12">
-          <div className="w-20 h-20 rounded-full bg-accent mx-auto mb-6 flex items-center justify-center">
-            <HelpCircle size={36} className="text-accent-foreground" />
+          <div className="w-20 h-20 rounded-full bg-amber-600 mx-auto mb-6 flex items-center justify-center">
+            <HelpCircle size={36} className="text-white" />
           </div>
-          <h1 className="font-display text-4xl md:text-5xl mb-4 text-cream gold-glow">
+          <h1 className="font-display text-4xl md:text-5xl mb-4 text-gray-900">
             Frequently Asked Questions
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-gray-600 text-lg">
             Everything you need to know about the author, the books, and the community.
           </p>
         </div>
 
         <div className="space-y-8">
           {faqs.map((category, catIndex) => (
-            <div key={catIndex} className="bg-card rounded-lg shadow-md overflow-hidden border border-accent/10">
-              <h2 className="font-display text-2xl text-accent p-6 pb-2">
+            <div key={catIndex} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <h2 className="font-display text-2xl text-amber-700 p-6 pb-2 border-b">
                 {category.category}
               </h2>
-              <div className="divide-y divide-accent/10">
+              <div className="divide-y divide-gray-200">
                 {category.questions.map((faq, qIndex) => {
                   const globalIndex = faqs.slice(0, catIndex).reduce((acc, c) => acc + c.questions.length, 0) + qIndex;
                   return (
@@ -92,15 +92,15 @@ const FAQ = () => {
                         onClick={() => toggleQuestion(globalIndex)}
                         className="flex justify-between items-center w-full text-left"
                       >
-                        <h3 className="font-display text-lg text-cream">
+                        <h3 className="font-display text-lg text-black font-semibold">
                           {faq.q}
                         </h3>
-                        <span className="text-accent text-xl ml-4">
+                        <span className="text-amber-600 text-xl ml-4">
                           {openIndex === globalIndex ? '−' : '+'}
                         </span>
                       </button>
                       {openIndex === globalIndex && (
-                        <div className="mt-4 text-muted-foreground leading-relaxed">
+                        <div className="mt-4 text-gray-700 leading-relaxed">
                           <p>{faq.a}</p>
                         </div>
                       )}
