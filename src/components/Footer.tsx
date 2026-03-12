@@ -26,7 +26,7 @@ const socialLinks = [
 const Footer = () => (
   <footer className="bg-secondary text-secondary-foreground py-8">
     <div className="container mx-auto px-4 text-center">
-      {/* Social Links with Icons */}
+      {/* Social Links */}
       <div className="flex justify-center gap-8 mb-6">
         {socialLinks.map(link => {
           const Icon = link.icon;
@@ -45,20 +45,40 @@ const Footer = () => (
         })}
       </div>
 
-      {/* Legal Links */}
+      {/* Legal & Navigation Links */}
       <div className="flex justify-center gap-4 text-xs text-muted-foreground mb-2 flex-wrap">
-  <a href="/privacy" className="hover:text-accent transition-colors">Privacy Policy</a>
-  <span>|</span>
-  <a href="/terms" className="hover:text-accent transition-colors">Terms of Service</a>
-  <span>|</span>
-  <a href="/faq" className="hover:text-accent transition-colors">FAQ</a>
-  <span>|</span>
-  <a href="/helpline" className="hover:text-accent transition-colors">Help</a>
-</div>
+        <a href="/privacy" className="hover:text-accent transition-colors">
+          Privacy Policy
+        </a>
+        <span>|</span>
+        <a href="/terms" className="hover:text-accent transition-colors">
+          Terms of Service
+        </a>
+        <span>|</span>
+        <a href="/faq" className="hover:text-accent transition-colors">
+          FAQ
+        </a>
+        <span>|</span>
+        <a href="/helpline" className="hover:text-accent transition-colors">
+          Site Guide
+        </a>
+        <span>|</span>
+        <a
+          href="https://recruitmenthbooks.pages.dev/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-accent transition-colors"
+        >
+          Buy Exclusive Scenes
+        </a>
+      </div>
 
       {/* Copyright */}
+          <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+        All rights reserved. Made with <Heart size={12} className="text-accent" /> for stories.
+      </p>
       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-        © 2026 hb00ks / H00man Publisher. All rights reserved. Made with <Heart size={12} className="text-accent" /> for stories.
+        © 2026 hb00ks / H00man Publisher. 
       </p>
     </div>
   </footer>
