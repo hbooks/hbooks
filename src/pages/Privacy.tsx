@@ -31,7 +31,7 @@ const Privacy = () => {
               Our Commitment to Your Privacy
             </h2>
             <p className="leading-relaxed">
-              At H00man Publishers, your privacy is not just a policy—it's a promise. We are committed to protecting the personal information you share with us and being transparent about how we use it. This policy explains our practices for the website <strong>hbooks-98a.pages.dev</strong> and any related services we offer.
+              At H00man Publishers, your privacy is not just a policy—it's a promise. We are committed to protecting the personal information you share with us and being transparent about how we use it. This policy explains our practices for the website <strong>hpbooks.uk/</strong> and any related services we offer.
             </p>
           </section>
 
