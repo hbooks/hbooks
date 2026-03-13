@@ -64,7 +64,7 @@ const Footer = () => (
         </a>
         <span>|</span>
         <a
-          href="https://recruitmenthbooks.pages.dev/"
+          href="https://exclusive.hpbooks.uk"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-accent transition-colors"
@@ -78,7 +78,7 @@ const Footer = () => (
       Made with <Heart size={12} className="text-accent" /> for stories.
       </p>
       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-      © 2026 hb00ks / H00man Publisher. All rights reserved.
+      © 2026 Hbooks / H00man Publisher. All rights reserved.
       </p>
     </div>
   </footer>
