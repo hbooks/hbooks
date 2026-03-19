@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import AdminPortal from "./components/AdminPortal";
+import AdminPage from './pages/AdminPage';
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Books from "./pages/Books";
@@ -22,6 +22,10 @@ import NonDiscordForm from "./pages/NonDiscordForm";
 import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
+
+
+// Inside your Router:
+
 
 const queryClient = new QueryClient();
 
@@ -46,6 +50,7 @@ const App = () => {
   <Route path="/library" element={<Library />} />
   {/* New routes */}
   <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
+  <Route path="/ir806" element={<AdminPage />} />
   <Route path="/thankyoupage" element={<ThankYou />} />
   <Route path="/privacy" element={<Privacy />} />
   <Route path="/terms" element={<Terms />} />
