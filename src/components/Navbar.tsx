@@ -1,54 +1,51 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogIn, X as CloseIcon } from 'lucide-react';
-
-interface NavbarProps {
-  onAdminTrigger: () => void;
-}
+import { FaBook, FaPaypal } from 'react-icons/fa';
+import { SiKofi } from 'react-icons/si';
 
 const links = [
   { to: '/', label: 'Home' },
   { to: '/about', label: 'About' },
-  { to: '/books', label: 'Books' },
+  { to: '/books', label: 'Latest Book' },
   { to: '/news', label: 'News' },
   { to: '/reviews', label: 'Reviews' },
   { to: '/library', label: 'Library' },
   { to: '/contact', label: 'Contact' },
-  { to: '/support', label: 'Support' },
+  { to: '/support', label: 'Support Me' },
 ];
 
-const Navbar = ({ onAdminTrigger }: NavbarProps) => {
+const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const clickCount = useRef(0);
-  const clickTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [supportTextIndex, setSupportTextIndex] = useState(0);
   const location = useLocation();
 
-  const handleLogoClick = () => {
-    clickCount.current++;
-    if (clickCount.current >= 3) {
-      clickCount.current = 0;
-      clearTimeout(clickTimer.current);
-      onAdminTrigger();
-    } else {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = setTimeout(() => {
-        clickCount.current = 0;
-      }, 600);
-    }
-  };
+  const supportOptions = [
+    { text: 'Support Me', icon: null },
+    { text: 'Buy me a Book', icon: FaBook },
+    { text: 'Ko-fi', icon: SiKofi },
+    { text: 'PayPal', icon: FaPaypal },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSupportTextIndex((prev) => (prev + 1) % supportOptions.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentSupport = supportOptions[supportTextIndex];
+  const SupportIcon = currentSupport.icon;
 
   return (
     <>
       <nav className="bg-secondary sticky top-0 z-50 shadow-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          {/* Logo */}
-          <button
-            onClick={handleLogoClick}
-            className="font-display text-2xl font-bold tracking-widest text-accent select-none"
-          >
+          {/* Logo - simple link */}
+          <Link to="/" className="font-display text-2xl font-bold tracking-widest text-accent select-none">
             hpbooks
-          </button>
+          </Link>
 
           {/* Desktop Navigation */}
           <ul className="hidden md:flex items-center gap-6">
@@ -60,7 +57,14 @@ const Navbar = ({ onAdminTrigger }: NavbarProps) => {
                     location.pathname === link.to ? 'text-accent' : 'text-secondary-foreground'
                   }`}
                 >
-                  {link.label}
+                  {link.label === 'Support Me' ? (
+                    <span className="flex items-center gap-2 transition-all duration-300">
+                      {SupportIcon && <SupportIcon className="text-accent" size={16} />}
+                      {currentSupport.text}
+                    </span>
+                  ) : (
+                    link.label
+                  )}
                 </Link>
               </li>
             ))}
@@ -109,7 +113,14 @@ const Navbar = ({ onAdminTrigger }: NavbarProps) => {
                   }`}
                   onClick={() => setIsOpen(false)}
                 >
-                  {link.label}
+                  {link.label === 'Support Me' ? (
+                    <span className="flex items-center gap-2">
+                      {SupportIcon && <SupportIcon className="text-accent" size={16} />}
+                      {currentSupport.text}
+                    </span>
+                  ) : (
+                    link.label
+                  )}
                 </Link>
               </li>
             ))}
