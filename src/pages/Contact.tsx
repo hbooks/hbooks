@@ -100,7 +100,7 @@ const Contact = () => {
               className="px-10 py-6 text-lg"
             >
               <Send size={20} className="mr-2" />
-              Drop a line
+              Message me
             </Button>
           </div>
         ) : (
