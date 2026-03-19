@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Send, MessageCircle } from 'lucide-react';
+import { Send } from 'lucide-react';
+import { FaXTwitter, FaInstagram, FaFacebookF, FaDiscord } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
 const socialLinks = [
-  { label: '𝕏', href: 'https://x.com/Raphael888870' },
-  { label: 'Instagram', href: 'https://www.instagram.com/raphael_mmw/' },
-  { label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61581325859715' },
-  { label: 'Discord', href: 'https://discord.gg/zbaugS2B2' },
+  { label: 'X', icon: FaXTwitter, href: 'https://x.com/Raphael888870', color: '#000000' },
+  { label: 'Instagram', icon: FaInstagram, href: 'https://www.instagram.com/raphael_mmw/', color: '#E4405F' },
+  { label: 'Facebook', icon: FaFacebookF, href: 'https://www.facebook.com/profile.php?id=61581325859715', color: '#1877F2' },
+  { label: 'Discord', icon: FaDiscord, href: 'https://discord.gg/zbaugS2B2', color: '#5865F2' },
 ];
 
 const Contact = () => {
+  const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -24,7 +26,6 @@ const Contact = () => {
     setSubmitting(true);
     setError('');
 
-    // 1. Insert into Supabase
     const { error: insertError } = await supabase.from('contact_messages').insert({
       name: name.trim(),
       email: email.trim(),
@@ -37,27 +38,20 @@ const Contact = () => {
       return;
     }
 
-    // 2. Call Edge Function to send auto‑reply email
+    // Auto‑reply email (unchanged)
     try {
-      const response = await fetch(
+      await fetch(
         'https://xwomtgvefbshvzgddnig.supabase.co/functions/v1/send-autoreply',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: name.trim(),
-            email: email.trim(),
-          }),
+          body: JSON.stringify({ name: name.trim(), email: email.trim() }),
         }
       );
-      if (!response.ok) {
-        console.error('Auto‑reply failed:', await response.text());
-      }
     } catch (notifyErr) {
       console.error('Auto‑reply error:', notifyErr);
     }
 
-    // 3. Clear form and show success
     setSubmitting(false);
     setSuccess(true);
     setName('');
@@ -70,72 +64,89 @@ const Contact = () => {
     <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4">
       <div className="container mx-auto max-w-xl">
         <div className="text-center mb-12">
-          <MessageCircle size={48} className="mx-auto text-accent mb-4" />
-          <h1 className="font-display text-4xl md:text-5xl mb-4 text-cream">Get in Touch</h1>
+          <h1 className="font-display text-4xl md:text-5xl mb-4 text-cream">Let's Connect</h1>
           <p className="text-cream opacity-80">
             For comments, inquiries, or just to say hello:
           </p>
           <p className="text-accent font-semibold mt-2">inquiries@hpbooks.uk</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card text-card-foreground p-8 rounded-lg shadow-md space-y-4">
-          <h2 className="font-display text-xl mb-4 text-center">Send a Message</h2>
-          <div>
-            <label className="block text-sm font-semibold mb-1">Your Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              maxLength={100}
-              className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1">Your Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              maxLength={255}
-              className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1">Message</label>
-            <textarea
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              required
-              maxLength={1000}
-              rows={5}
-              className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none"
-            />
-          </div>
-          <Button type="submit" disabled={submitting} variant="hero" className="w-full">
-            <Send size={16} /> {submitting ? 'Sending...' : 'Send Message'}
-          </Button>
-          {success && <p className="text-center text-sm text-accent font-medium">Message sent! Thank you for reaching out.</p>}
-          {error && <p className="text-center text-sm text-destructive font-medium">{error}</p>}
-        </form>
-
-        <div className="mt-10 text-center">
-          <p className="text-cream opacity-60 text-sm mb-4">Or find me on social media</p>
-          <div className="flex justify-center gap-6">
-            {socialLinks.map(link => (
+        {/* Social Icons – large & colourful */}
+        <div className="mb-16 text-center">
+          <p className="text-cream opacity-60 text-sm mb-6">Follow me on</p>
+          <div className="flex justify-center gap-8">
+            {socialLinks.map(({ label, icon: Icon, href, color }) => (
               <a
-                key={link.label}
-                href={link.href}
+                key={label}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent hover:text-cream transition-all duration-300 hover:scale-110 font-semibold"
+                className="transform transition-all duration-300 hover:scale-110"
+                style={{ color }}
               >
-                {link.label}
+                <Icon size={40} />
               </a>
             ))}
           </div>
         </div>
+
+        {/* Button that reveals the form */}
+        {!showForm ? (
+          <div className="text-center">
+            <Button
+              variant="hero"
+              size="lg"
+              onClick={() => setShowForm(true)}
+              className="px-10 py-6 text-lg"
+            >
+              <Send size={20} className="mr-2" />
+              Drop a line
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="bg-card text-card-foreground p-8 rounded-lg shadow-md space-y-4">
+            <h2 className="font-display text-xl mb-4 text-center">Send a Message</h2>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Your Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+                maxLength={100}
+                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Your Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                maxLength={255}
+                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Message</label>
+              <textarea
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                required
+                maxLength={1000}
+                rows={5}
+                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+              />
+            </div>
+            <Button type="submit" disabled={submitting} variant="hero" className="w-full">
+              <Send size={16} className="mr-2" />
+              {submitting ? 'Sending...' : 'Send Message'}
+            </Button>
+            {success && <p className="text-center text-sm text-accent font-medium">Message sent! Thank you for reaching out.</p>}
+            {error && <p className="text-center text-sm text-destructive font-medium">{error}</p>}
+          </form>
+        )}
       </div>
     </main>
   );
