@@ -22,7 +22,7 @@ const Navbar = () => {
   const location = useLocation();
 
   const supportOptions = [
-    { text: 'Support me on:', icon: null },
+    { text: 'Support me on', icon: null },
     { text: 'Buy me a coffee', icon: FaBook },
     { text: 'Ko-fi', icon: SiKofi },
     { text: 'PayPal', icon: FaPaypal },
@@ -31,7 +31,7 @@ const Navbar = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setSupportTextIndex((prev) => (prev + 1) % supportOptions.length);
-    }, 5000);
+    }, 3000);
     return () => clearInterval(interval);
   }, []);
 
