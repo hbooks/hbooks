@@ -33,7 +33,6 @@ const Books = () => {
 
   // Sender explicit rendering
   useEffect(() => {
-    // Replace with your actual popup form ID from your new Sender account
     const FORM_ID = 'b2kwyJ';
 
     const renderSenderForms = () => {
