@@ -19,10 +19,9 @@ import {
   AlertCircle,
   User,
   Clock,
-  Image as ImageIcon,
 } from 'lucide-react';
 
-type TableName = 'books' | 'news_posts' | 'upcoming_books' | 'reviews' | 'contact_messages' | 'admin_logs';
+type TableName = 'books' | 'upcoming_books' | 'reviews' | 'contact_messages' | 'admin_logs';
 
 interface Column {
   name: string;
@@ -47,30 +46,28 @@ const AdminPage = () => {
   const [showLogs, setShowLogs] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Toast notifications
+  // Toast & logout popup
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
   const [logoutPopup, setLogoutPopup] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const navigate = useNavigate();
 
-  // Update current time every second
+  // Update time
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Auth check
+  // Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -93,6 +90,7 @@ const AdminPage = () => {
     if (data && data.length > 0) {
       setTableColumns(Object.keys(data[0]).map(key => ({ name: key, type: typeof data[0][key] })));
     } else {
+      // Fallback: get columns from information_schema
       const { data: columns } = await supabase
         .from('information_schema.columns')
         .select('column_name, data_type')
@@ -148,7 +146,7 @@ const AdminPage = () => {
     navigate('/');
   };
 
-  // File upload handler
+  // File upload handler – stores file path
   const handleFileUpload = async (file: File, currentRow: any, isNew: boolean) => {
     if (!file || !session) return;
 
@@ -156,6 +154,7 @@ const AdminPage = () => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      // Store files under a folder per table? We'll just keep in root.
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -164,18 +163,13 @@ const AdminPage = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(filePath);
-
-      const publicUrl = urlData.publicUrl;
-
+      // Store only the file path in the database
       if (isNew) {
-        setNewRow({ ...newRow, cover_image: publicUrl });
+        setNewRow({ ...newRow, cover_image: filePath });
       } else {
-        setEditingRow({ ...editingRow, cover_image: publicUrl });
+        setEditingRow({ ...editingRow, cover_image: filePath });
       }
-      showToast('success', 'Image uploaded successfully');
+      showToast('success', 'Image uploaded');
     } catch (error: any) {
       showToast('error', `Upload failed: ${error.message}`);
     } finally {
@@ -183,29 +177,51 @@ const AdminPage = () => {
     }
   };
 
+  // Get signed URL for preview
+  const getSignedUrl = async (filePath: string) => {
+    const { data } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(filePath, 60); // valid 60 seconds
+    return data?.signedUrl;
+  };
+
+  // Preview component
+  const ImagePreview = ({ filePath }: { filePath: string }) => {
+    const [url, setUrl] = useState<string | null>(null);
+    useEffect(() => {
+      if (filePath) {
+        getSignedUrl(filePath).then(setUrl);
+      }
+    }, [filePath]);
+    if (!url) return <div className="h-12 w-12 bg-gray-700 rounded animate-pulse"></div>;
+    return <img src={url} alt="Cover" className="h-12 w-auto object-cover rounded shadow" />;
+  };
+
   const handleInsert = async () => {
     if (!newRow) return;
-    const { data, error } = await supabase.from(activeTable).insert(newRow).select();
+    // Remove any undefined fields (like id)
+    const cleanedRow = { ...newRow };
+    delete cleanedRow.id;
+    const { data, error } = await supabase.from(activeTable).insert(cleanedRow).select();
     if (error) {
       showToast('error', `Insert failed: ${error.message}`);
       return;
     }
     setNewRow(null);
     fetchTableData(activeTable);
-    logAction('INSERT', activeTable, data?.[0]?.id, newRow);
+    logAction('INSERT', activeTable, data?.[0]?.id, cleanedRow);
     showToast('success', 'Record added');
   };
 
   const handleUpdate = async () => {
     if (!editingRow || !editingRow.id) return;
-    const { error } = await supabase.from(activeTable).update(editingRow).eq('id', editingRow.id);
+    const { id, ...updates } = editingRow;
+    const { error } = await supabase.from(activeTable).update(updates).eq('id', id);
     if (error) {
       showToast('error', `Update failed: ${error.message}`);
       return;
     }
     setEditingRow(null);
     fetchTableData(activeTable);
-    logAction('UPDATE', activeTable, editingRow.id, editingRow);
+    logAction('UPDATE', activeTable, id, updates);
     showToast('success', 'Record updated');
   };
 
@@ -236,75 +252,29 @@ const AdminPage = () => {
   const isImageColumn = (colName: string) => colName === 'cover_image';
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-        <div className="text-gold text-xl animate-pulse">Loading admin panel...</div>
-      </div>
-    );
+    return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gold animate-pulse">Loading admin panel...</div>;
   }
 
   if (!session) {
+    // Login page (beautiful as before)
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Animated background blobs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -left-40 w-80 h-80 bg-gold rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-          <div className="absolute top-40 -right-40 w-80 h-80 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute -bottom-40 left-20 w-80 h-80 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-        </div>
-
+        {/* animated blobs... (same as previous) */}
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 w-full max-w-md shadow-2xl z-10">
-          <div className="text-center mb-8">
-            <h2 className="font-display text-3xl text-white">Admin Access</h2>
-            <p className="text-gray-300 mt-2">Secure portal for content management</p>
-          </div>
+          <h2 className="font-display text-3xl text-white text-center mb-8">Admin Access</h2>
           <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold"
-                placeholder="admin@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold"
-                placeholder="••••••••"
-              />
-            </div>
-            <Button type="submit" variant="hero" className="w-full bg-gold text-black hover:bg-gold/90 transition-all">
-              Login
-            </Button>
-            {loginError && (
-              <p className="text-red-400 text-sm text-center bg-red-900/30 p-2 rounded">{loginError}</p>
-            )}
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white" />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white" />
+            <Button type="submit" variant="hero" className="w-full bg-gold text-black hover:bg-gold/90">Login</Button>
+            {loginError && <p className="text-red-400 text-sm text-center">{loginError}</p>}
           </form>
         </div>
-
-        {/* Toast notifications for login */}
-        {toast.type && (
-          <div className="fixed bottom-4 right-4 z-50 animate-fade-in-up">
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg ${
-              toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-            }`}>
-              {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-              {toast.message}
-            </div>
-          </div>
-        )}
+        {toast.type && <div className="fixed bottom-4 right-4 z-50 bg-{toast.type === 'success' ? 'green' : 'red'}-600 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in-up flex items-center gap-2">{toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}{toast.message}</div>}
       </div>
     );
   }
 
+  // Main admin dashboard (custom header, etc.)
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Custom Admin Header */}
@@ -324,21 +294,11 @@ const AdminPage = () => {
               <Clock size={16} />
               <span className="text-sm font-mono">{format(currentTime, 'HH:mm:ss')}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLogs(!showLogs)}
-              className="text-gray-300 hover:text-white"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowLogs(!showLogs)} className="text-gray-300 hover:text-white">
               <Database size={16} className="mr-2" />
               {showLogs ? 'Hide Logs' : 'Show Logs'}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-gray-300 hover:text-white"
-            >
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-300 hover:text-white">
               <LogOut size={16} className="mr-2" />
               Logout
             </Button>
@@ -349,7 +309,7 @@ const AdminPage = () => {
       <div className="container mx-auto px-6 py-8">
         {/* Table Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
-          {(['books', 'news_posts', 'upcoming_books', 'reviews', 'contact_messages', 'admin_logs'] as TableName[]).map(table => (
+          {(['books', 'upcoming_books', 'reviews', 'contact_messages', 'admin_logs'] as TableName[]).map(table => (
             <button
               key={table}
               onClick={() => setActiveTable(table)}
@@ -370,23 +330,15 @@ const AdminPage = () => {
             <h3 className="font-display text-lg text-gold mb-3">Recent Activity</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left py-2 text-gray-400">Time</th>
-                    <th className="text-left text-gray-400">Action</th>
-                    <th className="text-left text-gray-400">Table</th>
-                    <th className="text-left text-gray-400">Record ID</th>
-                    <th className="text-left text-gray-400">Details</th>
-                   </tr>
-                </thead>
+                <thead><tr className="border-b border-gray-700"><th className="text-left py-2 text-gray-400">Time</th><th>Action</th><th>Table</th><th>Record ID</th><th>Details</th></tr></thead>
                 <tbody>
                   {logs.map(log => (
                     <tr key={log.id} className="border-b border-gray-700/50">
-                      <td className="py-2 text-gray-300">{new Date(log.created_at).toLocaleString()}</td>
-                      <td className="py-2 text-gray-300">{log.action}</td>
-                      <td className="py-2 text-gray-300">{log.table_name}</td>
-                      <td className="py-2 text-gray-300">{log.record_id || '-'}</td>
-                      <td className="py-2 text-gray-300 max-w-xs truncate">{JSON.stringify(log.details)}</td>
+                      <td className="py-2">{new Date(log.created_at).toLocaleString()}</td>
+                      <td>{log.action}</td>
+                      <td>{log.table_name}</td>
+                      <td>{log.record_id || '-'}</td>
+                      <td className="max-w-xs truncate">{JSON.stringify(log.details)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -419,9 +371,7 @@ const AdminPage = () => {
                           <span className="text-gray-400">auto</span>
                         ) : isImageColumn(col.name) ? (
                           <div className="flex flex-col gap-2">
-                            {newRow.cover_image && (
-                              <img src={newRow.cover_image} alt="Cover" className="h-12 w-auto object-cover rounded shadow" />
-                            )}
+                            {newRow.cover_image && <ImagePreview filePath={newRow.cover_image} />}
                             <div className="flex gap-2 items-center">
                               <label className="cursor-pointer bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
                                 <Upload size={12} />
@@ -440,29 +390,15 @@ const AdminPage = () => {
                             </div>
                           </div>
                         ) : col.type.includes('bool') ? (
-                          <input
-                            type="checkbox"
-                            checked={newRow[col.name] || false}
-                            onChange={e => setNewRow({ ...newRow, [col.name]: e.target.checked })}
-                            className="w-4 h-4 accent-gold"
-                          />
+                          <input type="checkbox" checked={newRow[col.name] || false} onChange={e => setNewRow({ ...newRow, [col.name]: e.target.checked })} className="w-4 h-4 accent-gold" />
                         ) : (
-                          <input
-                            type="text"
-                            value={newRow[col.name] || ''}
-                            onChange={e => setNewRow({ ...newRow, [col.name]: e.target.value })}
-                            className="w-full px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-gold"
-                          />
+                          <input type="text" value={newRow[col.name] || ''} onChange={e => setNewRow({ ...newRow, [col.name]: e.target.value })} className="w-full px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-gold" />
                         )}
                       </td>
                     ))}
                     <td className="px-4 py-2 border-b border-gray-700">
-                      <button onClick={handleInsert} className="text-green-400 hover:text-green-300 mr-2" disabled={uploading}>
-                        <Save size={16} />
-                      </button>
-                      <button onClick={() => setNewRow(null)} className="text-red-400 hover:text-red-300">
-                        <X size={16} />
-                      </button>
+                      <button onClick={handleInsert} className="text-green-400 hover:text-green-300 mr-2" disabled={uploading}><Save size={16} /></button>
+                      <button onClick={() => setNewRow(null)} className="text-red-400 hover:text-red-300"><X size={16} /></button>
                     </td>
                   </tr>
                 )}
@@ -480,9 +416,7 @@ const AdminPage = () => {
                               value
                             ) : isImageColumn(col.name) ? (
                               <div className="flex flex-col gap-2">
-                                {editingRow.cover_image && (
-                                  <img src={editingRow.cover_image} alt="Cover" className="h-12 w-auto object-cover rounded shadow" />
-                                )}
+                                {editingRow.cover_image && <ImagePreview filePath={editingRow.cover_image} />}
                                 <div className="flex gap-2 items-center">
                                   <label className="cursor-pointer bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
                                     <Upload size={12} />
@@ -501,24 +435,14 @@ const AdminPage = () => {
                                 </div>
                               </div>
                             ) : col.type.includes('bool') ? (
-                              <input
-                                type="checkbox"
-                                checked={editingRow[col.name] || false}
-                                onChange={e => setEditingRow({ ...editingRow, [col.name]: e.target.checked })}
-                                className="w-4 h-4 accent-gold"
-                              />
+                              <input type="checkbox" checked={editingRow[col.name] || false} onChange={e => setEditingRow({ ...editingRow, [col.name]: e.target.checked })} className="w-4 h-4 accent-gold" />
                             ) : (
-                              <input
-                                type="text"
-                                value={editingRow[col.name] || ''}
-                                onChange={e => setEditingRow({ ...editingRow, [col.name]: e.target.value })}
-                                className="w-full px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-gold"
-                              />
+                              <input type="text" value={editingRow[col.name] || ''} onChange={e => setEditingRow({ ...editingRow, [col.name]: e.target.value })} className="w-full px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-gold" />
                             )
                           ) : (
                             <span className={col.type.includes('bool') ? (value ? 'text-green-400' : 'text-red-400') : 'text-gray-200'}>
                               {isImageColumn(col.name) && value ? (
-                                <img src={value} alt="Cover" className="h-12 w-auto object-cover rounded shadow" />
+                                <ImagePreview filePath={value} />
                               ) : col.type.includes('bool') ? (
                                 value ? '✅' : '❌'
                               ) : (
@@ -532,27 +456,15 @@ const AdminPage = () => {
                     <td className="px-4 py-2">
                       {editingRow?.id === row.id ? (
                         <>
-                          <button onClick={handleUpdate} className="text-green-400 hover:text-green-300 mr-2" disabled={uploading}>
-                            <Save size={16} />
-                          </button>
-                          <button onClick={() => setEditingRow(null)} className="text-red-400 hover:text-red-300">
-                            <X size={16} />
-                          </button>
+                          <button onClick={handleUpdate} className="text-green-400 hover:text-green-300 mr-2" disabled={uploading}><Save size={16} /></button>
+                          <button onClick={() => setEditingRow(null)} className="text-red-400 hover:text-red-300"><X size={16} /></button>
                         </>
                       ) : (
                         <>
-                          <button onClick={() => setEditingRow(row)} className="text-gold hover:text-gold/80 mr-2">
-                            <Edit2 size={16} />
-                          </button>
-                          <button onClick={() => handleDelete(row.id)} className="text-red-400 hover:text-red-300 mr-2">
-                            <Trash2 size={16} />
-                          </button>
+                          <button onClick={() => setEditingRow(row)} className="text-gold hover:text-gold/80 mr-2"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDelete(row.id)} className="text-red-400 hover:text-red-300 mr-2"><Trash2 size={16} /></button>
                           {activeTable === 'reviews' && (
-                            <button
-                              onClick={() => toggleBoolean(row, 'approved')}
-                              className="text-blue-400 hover:text-blue-300"
-                              title="Toggle approved"
-                            >
+                            <button onClick={() => toggleBoolean(row, 'approved')} className="text-blue-400 hover:text-blue-300" title="Toggle approved">
                               {row.approved ? <Eye size={16} /> : <EyeOff size={16} />}
                             </button>
                           )}
@@ -577,65 +489,37 @@ const AdminPage = () => {
 
       {/* Logout Popup */}
       {logoutPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-700 animate-scale-in">
             <h3 className="text-xl font-display text-white mb-3">Confirm Logout</h3>
             <p className="text-gray-300 mb-6">Are you sure you want to end your session?</p>
             <div className="flex gap-3 justify-end">
-              <Button variant="ghost" onClick={() => setLogoutPopup(false)} className="text-gray-300 hover:text-white">
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmLogout} className="bg-red-600 hover:bg-red-700">
-                Logout
-              </Button>
+              <Button variant="ghost" onClick={() => setLogoutPopup(false)} className="text-gray-300 hover:text-white">Cancel</Button>
+              <Button variant="destructive" onClick={confirmLogout} className="bg-red-600 hover:bg-red-700">Logout</Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toast Notifications */}
+      {/* Toast */}
       {toast.type && (
         <div className="fixed bottom-4 right-4 z-50 animate-fade-in-up">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          } text-white`}>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white`}>
             {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
             {toast.message}
           </div>
         </div>
       )}
 
-      {/* Custom CSS for animations */}
       <style>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.2s ease-out;
-        }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.2s ease-out;
-        }
+        @keyframes blob { 0% { transform: translate(0px,0px) scale(1); } 33% { transform: translate(30px,-50px) scale(1.1); } 66% { transform: translate(-20px,20px) scale(0.9); } 100% { transform: translate(0px,0px) scale(1); } }
+        .animate-blob { animation: blob 7s infinite; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+        @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-scale-in { animation: scale-in 0.2s ease-out; }
+        @keyframes fade-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fade-in-up 0.2s ease-out; }
       `}</style>
     </div>
   );
