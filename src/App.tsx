@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ import AdminPage from './pages/AdminPage';
 import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
+import { supabase } from "@/lib/supabase";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +41,34 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
+  // Global error handler – logs frontend errors to Supabase
+  useEffect(() => {
+    const originalErrorHandler = window.onerror;
+    window.onerror = async (message, source, lineno, colno, error) => {
+      // Call original handler if any
+      if (originalErrorHandler) {
+        originalErrorHandler(message, source, lineno, colno, error);
+      }
+
+      // Try to log to Supabase – silently fail if not authenticated or table missing
+      try {
+        await supabase.from('system_errors').insert({
+          error_message: String(message),
+          error_stack: error?.stack,
+          url: window.location.href,
+          user_agent: navigator.userAgent,
+        });
+      } catch (err) {
+        console.error('Failed to log error to Supabase', err);
+      }
+    };
+
+    // Cleanup: restore original handler when component unmounts
+    return () => {
+      window.onerror = originalErrorHandler;
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
