@@ -33,6 +33,19 @@ const Particles = () => (
       />
     ))}
   </div>
+  
+// Holiday update
+<div class="bg-card border-l-4 border-accent p-6 my-8 rounded-lg shadow-md">
+  <div class="flex flex-col sm:flex-row items-center gap-4">
+    <div class="text-4xl">🌙✨</div>
+    <div>
+      <h3 class="font-display text-xl text-accent">Eid Mubarak</h3>
+      <p class="text-muted-foreground">
+        Wishing you and your loved ones a blessed and joyous celebration. May this special time bring peace, happiness, and inspiration.
+      </p>
+    </div>
+  </div>
+</div>
 );
 
 const Index = () => {
