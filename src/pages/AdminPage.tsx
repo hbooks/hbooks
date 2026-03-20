@@ -99,6 +99,10 @@ interface SystemError {
 const BUCKET_NAME = 'covers';
 const ADMIN_EMAIL = 'admin@hpbooks.uk';
 
+const emptyBook: Book = { title: '', cover_image: '', description: '', ubl_link: '', published: true };
+const emptyNews: News = { title: '', content: '', date: new Date().toISOString().slice(0, 16), published: true };
+const emptyUpcoming: Upcoming = { title: '', cover_image: '', description: '', estimated_date: '' };
+
 const AdminPage = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -125,19 +129,19 @@ const AdminPage = () => {
   const [errors, setErrors] = useState<SystemError[]>([]);
 
   // Editing states
-  const [editBook, setEditBook] = useState<Book>({ title: '', cover_image: '', description: '', ubl_link: '', published: true });
-  const [editNews, setEditNews] = useState<News>({ title: '', content: '', date: new Date().toISOString().slice(0, 16), published: true });
-  const [editUpcoming, setEditUpcoming] = useState<Upcoming>({ title: '', cover_image: '', description: '', estimated_date: '' });
+  const [editBook, setEditBook] = useState<Book>(emptyBook);
+  const [editNews, setEditNews] = useState<News>(emptyNews);
+  const [editUpcoming, setEditUpcoming] = useState<Upcoming>(emptyUpcoming);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Update time every second
+  // Update time
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Auth session
+  // Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -149,15 +153,9 @@ const AdminPage = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch data when authenticated
-  useEffect(() => {
-    if (session?.user?.email === ADMIN_EMAIL) {
-      fetchData();
-    }
-  }, [session]);
-
-  const fetchData = async () => {
-    const [booksRes, newsRes, upcomingRes, reviewsRes, contactsRes, logsRes, errorsRes] = await Promise.all([
+  // Fetch all data
+  const fetchAll = async () => {
+    const [b, n, u, r, c, l, e] = await Promise.all([
       supabase.from('books').select('*').order('created_at', { ascending: false }),
       supabase.from('news_posts').select('*').order('date', { ascending: false }),
       supabase.from('upcoming_books').select('*').order('created_at', { ascending: false }),
@@ -166,13 +164,24 @@ const AdminPage = () => {
       supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('system_errors').select('*').order('created_at', { ascending: false }).limit(100),
     ]);
-    if (booksRes.data) setBooks(booksRes.data);
-    if (newsRes.data) setNews(newsRes.data);
-    if (upcomingRes.data) setUpcoming(upcomingRes.data);
-    if (reviewsRes.data) setReviews(reviewsRes.data);
-    if (contactsRes.data) setContacts(contactsRes.data);
-    if (logsRes.data) setLogs(logsRes.data);
-    if (errorsRes.data) setErrors(errorsRes.data);
+    if (b.data) setBooks(b.data);
+    if (n.data) setNews(n.data);
+    if (u.data) setUpcoming(u.data);
+    if (r.data) setReviews(r.data);
+    if (c.data) setContacts(c.data);
+    if (l.data) setLogs(l.data);
+    if (e.data) setErrors(e.data);
+  };
+
+  useEffect(() => {
+    if (session?.user?.email === ADMIN_EMAIL) {
+      fetchAll();
+    }
+  }, [session]);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: '', type: null }), 4000);
   };
 
   const logAction = async (action: string, table: string, recordId?: number, details?: any) => {
@@ -185,29 +194,122 @@ const AdminPage = () => {
     });
   };
 
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: '', type: null }), 4000);
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setLoginError(error.message);
-      showToast('error', 'Login failed');
+  // ----- BOOKS CRUD -----
+  const saveBook = async () => {
+    if (!editBook.title) return;
+    if (editingId) {
+      const { error } = await supabase.from('books').update(editBook).eq('id', editingId);
+      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
+      showToast('success', 'Book updated');
+      await logAction('UPDATE', 'books', editingId, editBook);
     } else {
-      showToast('success', 'Welcome back, Admin!');
+      const { error } = await supabase.from('books').insert(editBook);
+      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
+      showToast('success', 'Book added');
+      await logAction('INSERT', 'books', undefined, editBook);
     }
+    setEditBook(emptyBook);
+    setEditingId(null);
+    fetchAll();
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+  const deleteBook = async (id: number) => {
+    if (!confirm('Delete this book?')) return;
+    const { error } = await supabase.from('books').delete().eq('id', id);
+    if (error) { showToast('error', 'Delete failed: ' + error.message); return; }
+    showToast('success', 'Book deleted');
+    await logAction('DELETE', 'books', id);
+    fetchAll();
   };
 
-  // Image upload
+  // ----- NEWS CRUD -----
+  const saveNews = async () => {
+    if (!editNews.title) return;
+    if (editingId) {
+      const { error } = await supabase.from('news_posts').update(editNews).eq('id', editingId);
+      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
+      showToast('success', 'News updated');
+      await logAction('UPDATE', 'news_posts', editingId, editNews);
+    } else {
+      const { error } = await supabase.from('news_posts').insert(editNews);
+      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
+      showToast('success', 'News published');
+      await logAction('INSERT', 'news_posts', undefined, editNews);
+    }
+    setEditNews(emptyNews);
+    setEditingId(null);
+    fetchAll();
+  };
+
+  const deleteNews = async (id: number) => {
+    if (!confirm('Delete this news?')) return;
+    const { error } = await supabase.from('news_posts').delete().eq('id', id);
+    if (error) { showToast('error', 'Delete failed: ' + error.message); return; }
+    showToast('success', 'News deleted');
+    await logAction('DELETE', 'news_posts', id);
+    fetchAll();
+  };
+
+  // ----- UPCOMING BOOKS CRUD -----
+  const saveUpcoming = async () => {
+    if (!editUpcoming.title) return;
+    if (editingId) {
+      const { error } = await supabase.from('upcoming_books').update(editUpcoming).eq('id', editingId);
+      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
+      showToast('success', 'Upcoming updated');
+      await logAction('UPDATE', 'upcoming_books', editingId, editUpcoming);
+    } else {
+      const { error } = await supabase.from('upcoming_books').insert(editUpcoming);
+      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
+      showToast('success', 'Upcoming added');
+      await logAction('INSERT', 'upcoming_books', undefined, editUpcoming);
+    }
+    setEditUpcoming(emptyUpcoming);
+    setEditingId(null);
+    fetchAll();
+  };
+
+  const deleteUpcoming = async (id: number) => {
+    if (!confirm('Delete this upcoming?')) return;
+    const { error } = await supabase.from('upcoming_books').delete().eq('id', id);
+    if (error) { showToast('error', 'Delete failed: ' + error.message); return; }
+    showToast('success', 'Upcoming deleted');
+    await logAction('DELETE', 'upcoming_books', id);
+    fetchAll();
+  };
+
+  // ----- REVIEWS -----
+  const approveReview = async (id: number, approve: boolean) => {
+    const { error } = await supabase.from('reviews').update({ approved: approve }).eq('id', id);
+    if (error) { showToast('error', 'Error updating review'); return; }
+    showToast('success', approve ? 'Review approved' : 'Review rejected');
+    await logAction(approve ? 'APPROVE' : 'REJECT', 'reviews', id);
+    fetchAll();
+  };
+
+  const deleteReview = async (id: number) => {
+    if (!confirm('Delete this review permanently?')) return;
+    const { error } = await supabase.from('reviews').delete().eq('id', id);
+    if (error) { showToast('error', 'Delete failed: ' + error.message); return; }
+    showToast('success', 'Review deleted');
+    await logAction('DELETE', 'reviews', id);
+    fetchAll();
+  };
+
+  // ----- CONTACT MESSAGES -----
+  const toggleReplied = async (id: number, current: boolean) => {
+    const { error } = await supabase.from('contact_messages').update({ replied: !current }).eq('id', id);
+    if (error) {
+      showToast('error', 'Failed to update: ' + error.message);
+      console.error('Toggle replied error:', error);
+      return;
+    }
+    showToast('success', !current ? 'Marked as replied' : 'Marked as pending');
+    await logAction('UPDATE', 'contact_messages', id, { replied: !current });
+    fetchAll();
+  };
+
+  // ----- IMAGE UPLOAD -----
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!file) return null;
     setUploading(true);
@@ -231,117 +333,6 @@ const AdminPage = () => {
     return data?.signedUrl;
   };
 
-  // Books CRUD (no series)
-  const saveBook = async () => {
-    if (!editBook.title) return;
-    const data = { ...editBook };
-    if (editingId) {
-      const { error } = await supabase.from('books').update(data).eq('id', editingId);
-      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
-      showToast('success', 'Book updated');
-      await logAction('UPDATE', 'books', editingId, data);
-    } else {
-      const { error } = await supabase.from('books').insert(data);
-      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
-      showToast('success', 'Book added');
-      await logAction('INSERT', 'books', undefined, data);
-    }
-    setEditBook({ title: '', cover_image: '', description: '', ubl_link: '', published: true });
-    setEditingId(null);
-    fetchData();
-  };
-
-  const deleteBook = async (id: number) => {
-    if (!confirm('Delete this book?')) return;
-    await supabase.from('books').delete().eq('id', id);
-    showToast('success', 'Book deleted');
-    await logAction('DELETE', 'books', id);
-    fetchData();
-  };
-
-  // News CRUD
-  const saveNews = async () => {
-    if (!editNews.title) return;
-    const data = { ...editNews };
-    if (editingId) {
-      const { error } = await supabase.from('news_posts').update(data).eq('id', editingId);
-      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
-      showToast('success', 'News updated');
-      await logAction('UPDATE', 'news_posts', editingId, data);
-    } else {
-      const { error } = await supabase.from('news_posts').insert(data);
-      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
-      showToast('success', 'News published');
-      await logAction('INSERT', 'news_posts', undefined, data);
-    }
-    setEditNews({ title: '', content: '', date: new Date().toISOString().slice(0, 16), published: true });
-    setEditingId(null);
-    fetchData();
-  };
-
-  const deleteNews = async (id: number) => {
-    if (!confirm('Delete this news?')) return;
-    await supabase.from('news_posts').delete().eq('id', id);
-    showToast('success', 'News deleted');
-    await logAction('DELETE', 'news_posts', id);
-    fetchData();
-  };
-
-  // Upcoming CRUD (no published column)
-  const saveUpcoming = async () => {
-    if (!editUpcoming.title) return;
-    const data = { ...editUpcoming };
-    if (editingId) {
-      const { error } = await supabase.from('upcoming_books').update(data).eq('id', editingId);
-      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
-      showToast('success', 'Upcoming updated');
-      await logAction('UPDATE', 'upcoming_books', editingId, data);
-    } else {
-      const { error } = await supabase.from('upcoming_books').insert(data);
-      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
-      showToast('success', 'Upcoming added');
-      await logAction('INSERT', 'upcoming_books', undefined, data);
-    }
-    setEditUpcoming({ title: '', cover_image: '', description: '', estimated_date: '' });
-    setEditingId(null);
-    fetchData();
-  };
-
-  const deleteUpcoming = async (id: number) => {
-    if (!confirm('Delete this upcoming?')) return;
-    await supabase.from('upcoming_books').delete().eq('id', id);
-    showToast('success', 'Upcoming deleted');
-    await logAction('DELETE', 'upcoming_books', id);
-    fetchData();
-  };
-
-  // Reviews management
-  const deleteReview = async (id: number) => {
-    if (!confirm('Delete this review permanently?')) return;
-    await supabase.from('reviews').delete().eq('id', id);
-    showToast('success', 'Review deleted');
-    await logAction('DELETE', 'reviews', id);
-    fetchData();
-  };
-
-  const approveReview = async (id: number, approve: boolean) => {
-    const { error } = await supabase.from('reviews').update({ approved: approve }).eq('id', id);
-    if (error) { showToast('error', 'Error updating review'); return; }
-    showToast('success', approve ? 'Review approved' : 'Review rejected');
-    await logAction(approve ? 'APPROVE' : 'REJECT', 'reviews', id);
-    fetchData();
-  };
-
-  // Contact messages – toggle replied
-  const toggleReplied = async (id: number, current: boolean) => {
-    const { error } = await supabase.from('contact_messages').update({ replied: !current }).eq('id', id);
-    if (error) { showToast('error', 'Error updating message status'); return; }
-    showToast('success', !current ? 'Marked as replied' : 'Marked as pending');
-    await logAction('UPDATE', 'contact_messages', id, { replied: !current });
-    fetchData();
-  };
-
-  // Image picker component
   const ImagePicker = ({ value, onChange }: { value: string; onChange: (url: string) => void }) => {
     const [preview, setPreview] = useState<string | null>(null);
     useEffect(() => {
@@ -365,11 +356,28 @@ const AdminPage = () => {
     );
   };
 
+  // ----- LOGIN & AUTH -----
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoginError(error.message);
+      showToast('error', 'Login failed');
+    } else {
+      showToast('success', 'Welcome back, Admin!');
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gold animate-pulse">Loading admin panel...</div>;
   }
 
-  // Login form
   if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4">
@@ -389,7 +397,6 @@ const AdminPage = () => {
     );
   }
 
-  // Not admin email
   if (session.user.email !== ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -402,14 +409,13 @@ const AdminPage = () => {
     );
   }
 
-  // Main admin dashboard
+  // Admin dashboard
   const inputClass = "w-full px-3 py-2 rounded bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-colors";
   const tabClass = (tab: Tab) => `flex items-center gap-2 px-4 py-2 rounded-t text-sm font-semibold transition-colors ${activeTab === tab ? 'bg-gray-700 text-gold' : 'bg-gray-800/50 text-gray-300 hover:text-gold'}`;
   const subTabClass = (tab: string, current: string) => `px-3 py-1 text-sm rounded-full transition-colors ${current === tab ? 'bg-gold text-black font-semibold' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600'}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 text-white">
-      {/* Header */}
       <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20 shadow-lg">
         <div className="container mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -466,12 +472,12 @@ const AdminPage = () => {
                 {logs.length === 0 ? <p className="text-gray-400 text-center py-4">No activity logged yet.</p> : (
                   <table className="w-full text-sm">
                     <thead className="text-left text-gray-400 border-b border-gray-700">
-                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th> </tr>
+                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
                     </thead>
                     <tbody>
                       {logs.map(l => (
                         <tr key={l.id} className="border-b border-gray-700/50">
-                          <td className="py-2">{new Date(l.created_at).toLocaleString()} </td>
+                          <td className="py-2">{new Date(l.created_at).toLocaleString()}</td>
                           <td>{l.admin_user}</td>
                           <td>{l.action}</td>
                           <td>{l.table_name}</td>
@@ -700,7 +706,7 @@ const AdminPage = () => {
                 {logs.length === 0 ? <p className="text-gray-400 text-center py-4">No activity logged yet.</p> : (
                   <table className="w-full text-sm">
                     <thead className="text-left text-gray-400 border-b border-gray-700">
-                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th> </tr>
+                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
                     </thead>
                     <tbody>
                       {logs.map(l => (
