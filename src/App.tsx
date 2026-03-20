@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,43 +22,35 @@ import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
 
-
-// Inside your Router:
-
-
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [showAdmin, setShowAdmin] = useState(false);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Navbar onAdminTrigger={() => setShowAdmin(true)} />
+          <Navbar />
           <Routes>
-  <Route path="/" element={<Index />} />
-  <Route path="/about" element={<About />} />
-  <Route path="/books" element={<Books />} />
-  <Route path="/news" element={<News />} />
-  <Route path="/reviews" element={<Reviews />} />
-  <Route path="/contact" element={<Contact />} />
-  <Route path="/support" element={<Support />} />
-  <Route path="/library" element={<Library />} />
-  {/* New routes */}
-  <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
-  <Route path="/ir806" element={<AdminPage />} />
-  <Route path="/thankyoupage" element={<ThankYou />} />
-  <Route path="/privacy" element={<Privacy />} />
-  <Route path="/terms" element={<Terms />} />
-  <Route path="/faq" element={<FAQ />} />
-  <Route path="/helpline" element={<Helpline />} />
-  <Route path="*" element={<NotFound />} />
-</Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/books" element={<Books />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/reviews" element={<Reviews />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
+            <Route path="/ir806" element={<AdminPage />} />
+            <Route path="/thankyoupage" element={<ThankYou />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/helpline" element={<Helpline />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
           <Footer />
-          <AdminPortal isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
