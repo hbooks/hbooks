@@ -18,7 +18,6 @@ import Support from "./pages/Support";
 import ThankYou from "./pages/ThankYou";
 import Library from "./pages/Library";
 import NonDiscordForm from "./pages/NonDiscordForm";
-import AdminPage from './pages/AdminPage';
 import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
@@ -86,7 +85,7 @@ const App = () => {
               <Route path="/support" element={<Support />} />
               <Route path="/library" element={<Library />} />
               <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
-              <Route path="/ir806" element={<AdminPage />} />
+              
               <Route path="/thankyoupage" element={<ThankYou />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
