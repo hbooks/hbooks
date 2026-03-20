@@ -37,7 +37,7 @@ interface Book {
   cover_image: string;          // stored path
   cover_image_url?: string;     // signed URL for display
   description: string;
-  ubl_link: string;
+  ubl: string;
   published: boolean;
   created_at: string;
 }
@@ -110,7 +110,7 @@ const emptyBook: Omit<Book, 'id' | 'created_at' | 'cover_image_url'> = {
   title: '',
   cover_image: '',
   description: '',
-  ubl_link: '',
+  ubl: '',
   published: false,
 };
 
@@ -1202,9 +1202,9 @@ const AdminPage = () => {
                           </label>
                           <input
                             type="url"
-                            value={bookFormData.ubl_link || ''}
+                            value={bookFormData.ubl || ''}
                             onChange={(e) =>
-                              setBookFormData({ ...bookFormData, ubl_link: e.target.value })
+                              setBookFormData({ ...bookFormData, ubl: e.target.value })
                             }
                             disabled={isSaving}
                             placeholder="https://..."
