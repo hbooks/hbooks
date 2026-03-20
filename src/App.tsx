@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Index from "./pages/Index";
@@ -24,6 +24,20 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Layout component that conditionally shows Navbar and Footer
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname === '/ir806';
+
+  return (
+    <>
+      {!isAdminRoute && <Navbar />}
+      {children}
+      {!isAdminRoute && <Footer />}
+    </>
+  );
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -31,26 +45,26 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/books" element={<Books />} />
-            <Route path="/news" element={<News />} />
-            <Route path="/reviews" element={<Reviews />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/library" element={<Library />} />
-            <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
-            <Route path="/ir806" element={<AdminPage />} />
-            <Route path="/thankyoupage" element={<ThankYou />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/helpline" element={<Helpline />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Footer />
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/books" element={<Books />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/reviews" element={<Reviews />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/support" element={<Support />} />
+              <Route path="/library" element={<Library />} />
+              <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
+              <Route path="/ir806" element={<AdminPage />} />
+              <Route path="/thankyoupage" element={<ThankYou />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/helpline" element={<Helpline />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Layout>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
