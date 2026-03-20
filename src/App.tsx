@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,17 +17,16 @@ import Support from "./pages/Support";
 import ThankYou from "./pages/ThankYou";
 import Library from "./pages/Library";
 import NonDiscordForm from "./pages/NonDiscordForm";
+import AdminPage from './pages/AdminPage';
 import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
-import { supabase } from "@/lib/supabase";
 
 const queryClient = new QueryClient();
 
-// Layout component that conditionally shows Navbar and Footer
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isAdminRoute = location.pathname === '/ir806';
+  const isAdminRoute = location.pathname === '/ir806x40';
 
   return (
     <>
@@ -40,34 +38,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  // Global error handler – logs frontend errors to Supabase
-  useEffect(() => {
-    const originalErrorHandler = window.onerror;
-    window.onerror = async (message, source, lineno, colno, error) => {
-      // Call original handler if any
-      if (originalErrorHandler) {
-        originalErrorHandler(message, source, lineno, colno, error);
-      }
-
-      // Try to log to Supabase – silently fail if not authenticated or table missing
-      try {
-        await supabase.from('system_errors').insert({
-          error_message: String(message),
-          error_stack: error?.stack,
-          url: window.location.href,
-          user_agent: navigator.userAgent,
-        });
-      } catch (err) {
-        console.error('Failed to log error to Supabase', err);
-      }
-    };
-
-    // Cleanup: restore original handler when component unmounts
-    return () => {
-      window.onerror = originalErrorHandler;
-    };
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -85,7 +55,7 @@ const App = () => {
               <Route path="/support" element={<Support />} />
               <Route path="/library" element={<Library />} />
               <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
-              
+              <Route path="/ir806x40" element={<AdminPage />} />
               <Route path="/thankyoupage" element={<ThankYou />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
