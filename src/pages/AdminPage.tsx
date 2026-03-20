@@ -853,33 +853,38 @@ const AdminPage = () => {
   };
 
   // ========== CONTACT MESSAGES ==========
-  const handleToggleMessageReply = async (id: string, currentReplied: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('contact_messages')
-        .update({ replied: !currentReplied })
-        .eq('id', id);
+ const handleToggleMessageReply = async (id: string, currentReplied: boolean) => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/toggle-message-reply`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, currentReplied }),
+      }
+    );
 
-      if (error) throw error;
+    const data = await response.json();
 
-      await logAction(userEmail || '', 'TOGGLE_REPLY', 'contact_messages', id, {
-        replied: !currentReplied,
-      });
-
-      toast({
-        title: 'Success',
-        description: `Message marked as ${!currentReplied ? 'replied' : 'pending'}`,
-      });
-      fetchAll();
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update message',
-        variant: 'destructive',
-      });
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update message');
     }
-  };
 
+    toast({
+      title: 'Success',
+      description: `Message marked as ${data.newReplied ? 'replied' : 'pending'}`,
+    });
+
+    // Refresh the contact messages list
+    fetchAll();
+  } catch (err: any) {
+    toast({
+      title: 'Error',
+      description: err.message || 'Failed to update message',
+      variant: 'destructive',
+    });
+  }
+};
   // ========== LOGIN FORM (if not authenticated) ==========
   if (!isAuthenticated) {
     return (
