@@ -58,7 +58,6 @@ interface Upcoming {
   cover_image: string;
   description: string;
   estimated_date: string;
- 
 }
 
 interface Review {
@@ -113,7 +112,7 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>('hbdb');
   const [dbSubTab, setDbSubTab] = useState<DbSubTab>('books');
   const [logsSubTab, setLogsSubTab] = useState<LogsSubTab>('activity');
-  const [showLogsPanel, setShowLogsPanel] = useState(false); // toggle for logs display
+  const [showLogsPanel, setShowLogsPanel] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Data states
@@ -126,9 +125,9 @@ const AdminPage = () => {
   const [errors, setErrors] = useState<SystemError[]>([]);
 
   // Editing states
-  const [editBook, setEditBook] = useState<Book>({ title: '', cover_image: '', description: '', ubl_link: '', series: '', published: true });
+  const [editBook, setEditBook] = useState<Book>({ title: '', cover_image: '', description: '', ubl_link: '', published: true });
   const [editNews, setEditNews] = useState<News>({ title: '', content: '', date: new Date().toISOString().slice(0, 16), published: true });
-  const [editUpcoming, setEditUpcoming] = useState<Upcoming>({ title: '', cover_image: '', description: '', estimated_date: '', published: true });
+  const [editUpcoming, setEditUpcoming] = useState<Upcoming>({ title: '', cover_image: '', description: '', estimated_date: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -208,6 +207,7 @@ const AdminPage = () => {
     navigate('/');
   };
 
+  // Image upload
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!file) return null;
     setUploading(true);
@@ -231,13 +231,10 @@ const AdminPage = () => {
     return data?.signedUrl;
   };
 
-  // Books CRUD (remove series if column missing)
+  // Books CRUD (no series)
   const saveBook = async () => {
     if (!editBook.title) return;
-    // Remove series if the column doesn't exist in your DB
     const data = { ...editBook };
-    // Optionally delete data.series if column not present
-    // delete data.series;
     if (editingId) {
       const { error } = await supabase.from('books').update(data).eq('id', editingId);
       if (error) { showToast('error', 'Update failed: ' + error.message); return; }
@@ -249,7 +246,7 @@ const AdminPage = () => {
       showToast('success', 'Book added');
       await logAction('INSERT', 'books', undefined, data);
     }
-    setEditBook({ title: '', cover_image: '', description: '', ubl_link: '', series: '', published: true });
+    setEditBook({ title: '', cover_image: '', description: '', ubl_link: '', published: true });
     setEditingId(null);
     fetchData();
   };
@@ -290,11 +287,10 @@ const AdminPage = () => {
     fetchData();
   };
 
-  // Upcoming CRUD (remove published if column missing)
+  // Upcoming CRUD (no published column)
   const saveUpcoming = async () => {
     if (!editUpcoming.title) return;
     const data = { ...editUpcoming };
-    // delete data.published if column not present
     if (editingId) {
       const { error } = await supabase.from('upcoming_books').update(data).eq('id', editingId);
       if (error) { showToast('error', 'Update failed: ' + error.message); return; }
@@ -306,7 +302,7 @@ const AdminPage = () => {
       showToast('success', 'Upcoming added');
       await logAction('INSERT', 'upcoming_books', undefined, data);
     }
-    setEditUpcoming({ title: '', cover_image: '', description: '', estimated_date: '', published: true });
+    setEditUpcoming({ title: '', cover_image: '', description: '', estimated_date: '' });
     setEditingId(null);
     fetchData();
   };
@@ -319,7 +315,7 @@ const AdminPage = () => {
     fetchData();
   };
 
-  // Reviews – full management (view/delete any review)
+  // Reviews management
   const deleteReview = async (id: number) => {
     if (!confirm('Delete this review permanently?')) return;
     await supabase.from('reviews').delete().eq('id', id);
@@ -336,7 +332,7 @@ const AdminPage = () => {
     fetchData();
   };
 
-  // Contact messages – toggle replied status
+  // Contact messages – toggle replied
   const toggleReplied = async (id: number, current: boolean) => {
     const { error } = await supabase.from('contact_messages').update({ replied: !current }).eq('id', id);
     if (error) { showToast('error', 'Error updating message status'); return; }
@@ -354,7 +350,7 @@ const AdminPage = () => {
     return (
       <div className="flex gap-2 items-center">
         {preview && <img src={preview} alt="preview" className="h-12 w-auto object-cover rounded shadow" />}
-        <label className="cursor-pointer bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+        <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors">
           <Upload size={12} /> Upload
           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
             const file = e.target.files?.[0];
@@ -373,7 +369,7 @@ const AdminPage = () => {
     return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gold animate-pulse">Loading admin panel...</div>;
   }
 
-  // Not logged in – show login form
+  // Login form
   if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4">
@@ -393,7 +389,7 @@ const AdminPage = () => {
     );
   }
 
-  // Logged in but not admin email
+  // Not admin email
   if (session.user.email !== ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -406,10 +402,10 @@ const AdminPage = () => {
     );
   }
 
-  // Admin dashboard
-  const inputClass = "w-full px-3 py-2 rounded border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent";
-  const tabClass = (tab: Tab) => `flex items-center gap-2 px-4 py-2 rounded-t text-sm font-semibold transition-colors ${activeTab === tab ? 'bg-card text-foreground' : 'bg-secondary text-secondary-foreground hover:text-accent'}`;
-  const subTabClass = (tab: string, current: string) => `px-3 py-1 text-sm rounded-full ${current === tab ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent/20'}`;
+  // Main admin dashboard
+  const inputClass = "w-full px-3 py-2 rounded bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-colors";
+  const tabClass = (tab: Tab) => `flex items-center gap-2 px-4 py-2 rounded-t text-sm font-semibold transition-colors ${activeTab === tab ? 'bg-gray-700 text-gold' : 'bg-gray-800/50 text-gray-300 hover:text-gold'}`;
+  const subTabClass = (tab: string, current: string) => `px-3 py-1 text-sm rounded-full transition-colors ${current === tab ? 'bg-gold text-black font-semibold' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600'}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 text-white">
@@ -452,7 +448,7 @@ const AdminPage = () => {
         )}
 
         {/* Main Tabs */}
-        <div className="flex gap-1 border-b border-border mb-6">
+        <div className="flex gap-1 border-b border-gray-700 mb-6">
           <button className={tabClass('hbdb')} onClick={() => setActiveTab('hbdb')}><Database size={16} /> HB Database</button>
           <button className={tabClass('content')} onClick={() => setActiveTab('content')}><Layout size={16} /> Content</button>
           <button className={tabClass('logs')} onClick={() => setActiveTab('logs')}><FileText size={16} /> Logs</button>
@@ -470,12 +466,12 @@ const AdminPage = () => {
                 {logs.length === 0 ? <p className="text-gray-400 text-center py-4">No activity logged yet.</p> : (
                   <table className="w-full text-sm">
                     <thead className="text-left text-gray-400 border-b border-gray-700">
-                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
+                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th> </tr>
                     </thead>
                     <tbody>
                       {logs.map(l => (
                         <tr key={l.id} className="border-b border-gray-700/50">
-                          <td className="py-2">{new Date(l.created_at).toLocaleString()}</td>
+                          <td className="py-2">{new Date(l.created_at).toLocaleString()} </td>
                           <td>{l.admin_user}</td>
                           <td>{l.action}</td>
                           <td>{l.table_name}</td>
@@ -529,7 +525,6 @@ const AdminPage = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input className={inputClass} placeholder="Title" value={editBook.title} onChange={e => setEditBook({ ...editBook, title: e.target.value })} />
-                  <input className={inputClass} placeholder="Series (optional)" value={editBook.series} onChange={e => setEditBook({ ...editBook, series: e.target.value })} />
                   <div className="col-span-2 flex gap-2 items-center">
                     <input className={inputClass} placeholder="Cover image path" value={editBook.cover_image} onChange={e => setEditBook({ ...editBook, cover_image: e.target.value })} />
                     <ImagePicker value={editBook.cover_image} onChange={(url) => setEditBook({ ...editBook, cover_image: url })} />
@@ -537,7 +532,7 @@ const AdminPage = () => {
                   <input className={inputClass} placeholder="UBL Link" value={editBook.ubl_link} onChange={e => setEditBook({ ...editBook, ubl_link: e.target.value })} />
                 </div>
                 <textarea className={inputClass + ' resize-none'} rows={3} placeholder="Description" value={editBook.description} onChange={e => setEditBook({ ...editBook, description: e.target.value })} />
-                <Button variant="hero" size="sm" onClick={saveBook}>
+                <Button variant="hero" size="sm" onClick={saveBook} className="bg-gold text-black hover:bg-gold/90">
                   {editingId ? <><Save size={14} /> Update Book</> : <><Plus size={14} /> Add Book</>}
                 </Button>
                 <div className="space-y-2 mt-4">
@@ -562,7 +557,7 @@ const AdminPage = () => {
               <div className="space-y-4">
                 <input className={inputClass} placeholder="Title" value={editNews.title} onChange={e => setEditNews({ ...editNews, title: e.target.value })} />
                 <textarea className={inputClass + ' resize-none'} rows={4} placeholder="Content" value={editNews.content} onChange={e => setEditNews({ ...editNews, content: e.target.value })} />
-                <Button variant="hero" size="sm" onClick={saveNews}>
+                <Button variant="hero" size="sm" onClick={saveNews} className="bg-gold text-black hover:bg-gold/90">
                   {editingId ? <><Save size={14} /> Update News</> : <><Plus size={14} /> Add News</>}
                 </Button>
                 <div className="space-y-2 mt-4">
@@ -591,7 +586,7 @@ const AdminPage = () => {
                   </div>
                 </div>
                 <textarea className={inputClass + ' resize-none'} rows={3} placeholder="Description" value={editUpcoming.description} onChange={e => setEditUpcoming({ ...editUpcoming, description: e.target.value })} />
-                <Button variant="hero" size="sm" onClick={saveUpcoming}>
+                <Button variant="hero" size="sm" onClick={saveUpcoming} className="bg-gold text-black hover:bg-gold/90">
                   {editingId ? <><Save size={14} /> Update</> : <><Plus size={14} /> Add Upcoming</>}
                 </Button>
                 <div className="space-y-2 mt-4">
@@ -645,7 +640,6 @@ const AdminPage = () => {
         {/* CONTENT TAB */}
         {activeTab === 'content' && (
           <div className="space-y-6">
-            {/* Reviews section */}
             <div>
               <h3 className="font-display text-lg mb-3 flex items-center gap-2"><Eye size={18} /> Manage Reviews</h3>
               {reviews.length === 0 ? (
@@ -676,17 +670,25 @@ const AdminPage = () => {
             <div>
               <h3 className="font-display text-lg mb-3">Live Pages Content</h3>
               <p className="text-sm text-gray-400 mb-2">Quick links to edit content that appears on the frontend:</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('books'); }}><BookOpen size={14} className="mr-2" /> Edit Books</Button>
-                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('news'); }}><Newspaper size={14} className="mr-2" /> Edit News</Button>
-                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('upcoming'); }}><Clock size={14} className="mr-2" /> Edit Upcoming</Button>
-                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('contacts'); }}><Mail size={14} className="mr-2" /> View Contact Messages</Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('books'); }} className="border-gold text-gold hover:bg-gold hover:text-black transition-all">
+                  <BookOpen size={14} className="mr-2" /> Edit Books
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('news'); }} className="border-gold text-gold hover:bg-gold hover:text-black transition-all">
+                  <Newspaper size={14} className="mr-2" /> Edit News
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('upcoming'); }} className="border-gold text-gold hover:bg-gold hover:text-black transition-all">
+                  <Clock size={14} className="mr-2" /> Edit Upcoming
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('contacts'); }} className="border-gold text-gold hover:bg-gold hover:text-black transition-all">
+                  <Mail size={14} className="mr-2" /> View Contact Messages
+                </Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* LOGS TAB – Only the detailed logs, separate from toggle panel */}
+        {/* LOGS TAB */}
         {activeTab === 'logs' && (
           <div>
             <div className="flex gap-2 mb-4">
@@ -698,7 +700,7 @@ const AdminPage = () => {
                 {logs.length === 0 ? <p className="text-gray-400 text-center py-4">No activity logged yet.</p> : (
                   <table className="w-full text-sm">
                     <thead className="text-left text-gray-400 border-b border-gray-700">
-                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
+                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th> </tr>
                     </thead>
                     <tbody>
                       {logs.map(l => (
