@@ -25,10 +25,14 @@ import {
   FileText,
   RefreshCw,
   Crown,
+  Mail,
+  Reply,
+  List,
+  Calendar,
 } from 'lucide-react';
 
 type Tab = 'hbdb' | 'content' | 'logs';
-type DbSubTab = 'books' | 'news' | 'upcoming';
+type DbSubTab = 'books' | 'news' | 'upcoming' | 'contacts';
 type LogsSubTab = 'activity' | 'errors';
 
 interface Book {
@@ -37,7 +41,6 @@ interface Book {
   cover_image: string;
   description: string;
   ubl_link: string;
-  series: string;
   published: boolean;
 }
 
@@ -55,7 +58,7 @@ interface Upcoming {
   cover_image: string;
   description: string;
   estimated_date: string;
-  published: boolean;
+ 
 }
 
 interface Review {
@@ -64,6 +67,15 @@ interface Review {
   review_text: string;
   rating: number;
   approved: boolean;
+}
+
+interface ContactMessage {
+  id?: number;
+  name: string;
+  email: string;
+  message: string;
+  replied: boolean;
+  created_at: string;
 }
 
 interface AdminLog {
@@ -101,12 +113,15 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>('hbdb');
   const [dbSubTab, setDbSubTab] = useState<DbSubTab>('books');
   const [logsSubTab, setLogsSubTab] = useState<LogsSubTab>('activity');
+  const [showLogsPanel, setShowLogsPanel] = useState(false); // toggle for logs display
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Data states
   const [books, setBooks] = useState<Book[]>([]);
   const [news, setNews] = useState<News[]>([]);
   const [upcoming, setUpcoming] = useState<Upcoming[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [contacts, setContacts] = useState<ContactMessage[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [errors, setErrors] = useState<SystemError[]>([]);
 
@@ -116,6 +131,12 @@ const AdminPage = () => {
   const [editUpcoming, setEditUpcoming] = useState<Upcoming>({ title: '', cover_image: '', description: '', estimated_date: '', published: true });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Auth session
   useEffect(() => {
@@ -137,11 +158,12 @@ const AdminPage = () => {
   }, [session]);
 
   const fetchData = async () => {
-    const [booksRes, newsRes, upcomingRes, reviewsRes, logsRes, errorsRes] = await Promise.all([
+    const [booksRes, newsRes, upcomingRes, reviewsRes, contactsRes, logsRes, errorsRes] = await Promise.all([
       supabase.from('books').select('*').order('created_at', { ascending: false }),
       supabase.from('news_posts').select('*').order('date', { ascending: false }),
       supabase.from('upcoming_books').select('*').order('created_at', { ascending: false }),
       supabase.from('reviews').select('*').order('created_at', { ascending: false }),
+      supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
       supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('system_errors').select('*').order('created_at', { ascending: false }).limit(100),
     ]);
@@ -149,6 +171,7 @@ const AdminPage = () => {
     if (newsRes.data) setNews(newsRes.data);
     if (upcomingRes.data) setUpcoming(upcomingRes.data);
     if (reviewsRes.data) setReviews(reviewsRes.data);
+    if (contactsRes.data) setContacts(contactsRes.data);
     if (logsRes.data) setLogs(logsRes.data);
     if (errorsRes.data) setErrors(errorsRes.data);
   };
@@ -208,10 +231,13 @@ const AdminPage = () => {
     return data?.signedUrl;
   };
 
-  // Books CRUD
+  // Books CRUD (remove series if column missing)
   const saveBook = async () => {
     if (!editBook.title) return;
+    // Remove series if the column doesn't exist in your DB
     const data = { ...editBook };
+    // Optionally delete data.series if column not present
+    // delete data.series;
     if (editingId) {
       const { error } = await supabase.from('books').update(data).eq('id', editingId);
       if (error) { showToast('error', 'Update failed: ' + error.message); return; }
@@ -264,10 +290,11 @@ const AdminPage = () => {
     fetchData();
   };
 
-  // Upcoming CRUD
+  // Upcoming CRUD (remove published if column missing)
   const saveUpcoming = async () => {
     if (!editUpcoming.title) return;
     const data = { ...editUpcoming };
+    // delete data.published if column not present
     if (editingId) {
       const { error } = await supabase.from('upcoming_books').update(data).eq('id', editingId);
       if (error) { showToast('error', 'Update failed: ' + error.message); return; }
@@ -292,12 +319,29 @@ const AdminPage = () => {
     fetchData();
   };
 
-  // Reviews approval
+  // Reviews – full management (view/delete any review)
+  const deleteReview = async (id: number) => {
+    if (!confirm('Delete this review permanently?')) return;
+    await supabase.from('reviews').delete().eq('id', id);
+    showToast('success', 'Review deleted');
+    await logAction('DELETE', 'reviews', id);
+    fetchData();
+  };
+
   const approveReview = async (id: number, approve: boolean) => {
     const { error } = await supabase.from('reviews').update({ approved: approve }).eq('id', id);
     if (error) { showToast('error', 'Error updating review'); return; }
     showToast('success', approve ? 'Review approved' : 'Review rejected');
     await logAction(approve ? 'APPROVE' : 'REJECT', 'reviews', id);
+    fetchData();
+  };
+
+  // Contact messages – toggle replied status
+  const toggleReplied = async (id: number, current: boolean) => {
+    const { error } = await supabase.from('contact_messages').update({ replied: !current }).eq('id', id);
+    if (error) { showToast('error', 'Error updating message status'); return; }
+    showToast('success', !current ? 'Marked as replied' : 'Marked as pending');
+    await logAction('UPDATE', 'contact_messages', id, { replied: !current });
     fetchData();
   };
 
@@ -334,10 +378,13 @@ const AdminPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 w-full max-w-md shadow-2xl">
+          <div className="flex justify-center mb-6">
+            <img src="/assets/favicon/web-app-manifest-192x192.png" alt="Logo" className="w-16 h-16 rounded-full shadow-lg" />
+          </div>
           <h2 className="font-display text-3xl text-white text-center mb-8">Admin Access</h2>
           <form onSubmit={handleLogin} className="space-y-5">
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white" />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white" />
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold" />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold" />
             <Button type="submit" variant="hero" className="w-full bg-gold text-black hover:bg-gold/90">Login</Button>
             {loginError && <p className="text-red-400 text-sm text-center">{loginError}</p>}
           </form>
@@ -359,41 +406,41 @@ const AdminPage = () => {
     );
   }
 
-  // Admin dashboard (authenticated)
+  // Admin dashboard
   const inputClass = "w-full px-3 py-2 rounded border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent";
   const tabClass = (tab: Tab) => `flex items-center gap-2 px-4 py-2 rounded-t text-sm font-semibold transition-colors ${activeTab === tab ? 'bg-card text-foreground' : 'bg-secondary text-secondary-foreground hover:text-accent'}`;
   const subTabClass = (tab: string, current: string) => `px-3 py-1 text-sm rounded-full ${current === tab ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent/20'}`;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Custom Admin Header */}
-      <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 text-white">
+      {/* Header */}
+      <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20 shadow-lg">
+        <div className="container mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center">
-              <Crown size={20} className="text-black" />
-            </div>
+            <img src="/assets/favicon/web-app-manifest-192x192.png" alt="Logo" className="w-10 h-10 rounded-full border-2 border-gold" />
             <div>
               <h1 className="font-display text-xl text-white">Admin Dashboard</h1>
               <p className="text-xs text-gray-400">Welcome, {session.user.email}</p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 bg-gray-700/50 px-3 py-1 rounded-full text-sm">
+              <Clock size={14} className="text-gold" />
+              <span className="font-mono">{format(currentTime, 'HH:mm:ss')}</span>
+              <Calendar size={14} className="text-gold ml-2" />
+              <span>{format(currentTime, 'EEEE')}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowLogsPanel(!showLogsPanel)} className="text-gray-300 hover:text-white">
+              <List size={16} className="mr-1" /> {showLogsPanel ? 'Hide Logs' : 'Show Logs'}
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-300 hover:text-white">
-              <LogOut size={16} className="mr-2" /> Logout
+              <LogOut size={16} className="mr-1" /> Logout
             </Button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        {/* Main Tabs */}
-        <div className="flex gap-1 border-b border-border mb-6">
-          <button className={tabClass('hbdb')} onClick={() => setActiveTab('hbdb')}><Database size={16} /> HB Database</button>
-          <button className={tabClass('content')} onClick={() => setActiveTab('content')}><Layout size={16} /> Content</button>
-          <button className={tabClass('logs')} onClick={() => setActiveTab('logs')}><FileText size={16} /> Logs</button>
-        </div>
-
         {/* Toast */}
         {toast.type && (
           <div className="fixed bottom-4 right-4 z-50 animate-fade-in-up">
@@ -404,25 +451,85 @@ const AdminPage = () => {
           </div>
         )}
 
+        {/* Main Tabs */}
+        <div className="flex gap-1 border-b border-border mb-6">
+          <button className={tabClass('hbdb')} onClick={() => setActiveTab('hbdb')}><Database size={16} /> HB Database</button>
+          <button className={tabClass('content')} onClick={() => setActiveTab('content')}><Layout size={16} /> Content</button>
+          <button className={tabClass('logs')} onClick={() => setActiveTab('logs')}><FileText size={16} /> Logs</button>
+        </div>
+
+        {/* Logs Panel (toggle) */}
+        {showLogsPanel && (
+          <div className="bg-gray-800/50 rounded-xl p-4 mb-6 border border-gray-700 backdrop-blur-sm">
+            <div className="flex gap-4 mb-3">
+              <button className={subTabClass('activity', logsSubTab)} onClick={() => setLogsSubTab('activity')}>Activity Logs</button>
+              <button className={subTabClass('errors', logsSubTab)} onClick={() => setLogsSubTab('errors')}>System Errors</button>
+            </div>
+            {logsSubTab === 'activity' && (
+              <div className="overflow-auto max-h-80">
+                {logs.length === 0 ? <p className="text-gray-400 text-center py-4">No activity logged yet.</p> : (
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-gray-400 border-b border-gray-700">
+                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
+                    </thead>
+                    <tbody>
+                      {logs.map(l => (
+                        <tr key={l.id} className="border-b border-gray-700/50">
+                          <td className="py-2">{new Date(l.created_at).toLocaleString()}</td>
+                          <td>{l.admin_user}</td>
+                          <td>{l.action}</td>
+                          <td>{l.table_name}</td>
+                          <td className="max-w-xs truncate">{JSON.stringify(l.details)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+            {logsSubTab === 'errors' && (
+              <div className="overflow-auto max-h-80">
+                {errors.length === 0 ? <p className="text-gray-400 text-center py-4">No errors recorded.</p> : (
+                  errors.map(e => (
+                    <div key={e.id} className="bg-red-900/20 border border-red-500/30 p-3 rounded mb-2 text-sm">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>{new Date(e.created_at).toLocaleString()}</span>
+                        <span>{e.url}</span>
+                      </div>
+                      <p className="font-mono text-red-400">{e.error_message}</p>
+                      {e.error_stack && <details className="mt-2"><summary className="cursor-pointer">Stack trace</summary><pre className="text-xs text-red-300 overflow-auto max-h-40">{e.error_stack}</pre></details>}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* HB DATABASE TAB */}
         {activeTab === 'hbdb' && (
           <div>
-            <div className="flex gap-2 mb-4">
-              {(['books', 'news', 'upcoming'] as const).map(tab => (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {(['books', 'news', 'upcoming', 'contacts'] as const).map(tab => (
                 <button key={tab} className={subTabClass(tab, dbSubTab)} onClick={() => { setDbSubTab(tab); setEditingId(null); }}>
                   {tab === 'books' && <BookOpen size={14} />}
                   {tab === 'news' && <Newspaper size={14} />}
                   {tab === 'upcoming' && <Clock size={14} />}
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'contacts' && <Mail size={14} />}
+                  {tab === 'books' && 'Books'}
+                  {tab === 'news' && 'News'}
+                  {tab === 'upcoming' && 'Upcoming'}
+                  {tab === 'contacts' && 'Contact Messages'}
                 </button>
               ))}
             </div>
 
+            {/* Books */}
             {dbSubTab === 'books' && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input className={inputClass} placeholder="Title" value={editBook.title} onChange={e => setEditBook({ ...editBook, title: e.target.value })} />
-                  <input className={inputClass} placeholder="Series" value={editBook.series} onChange={e => setEditBook({ ...editBook, series: e.target.value })} />
+                  <input className={inputClass} placeholder="Series (optional)" value={editBook.series} onChange={e => setEditBook({ ...editBook, series: e.target.value })} />
                   <div className="col-span-2 flex gap-2 items-center">
                     <input className={inputClass} placeholder="Cover image path" value={editBook.cover_image} onChange={e => setEditBook({ ...editBook, cover_image: e.target.value })} />
                     <ImagePicker value={editBook.cover_image} onChange={(url) => setEditBook({ ...editBook, cover_image: url })} />
@@ -434,15 +541,15 @@ const AdminPage = () => {
                   {editingId ? <><Save size={14} /> Update Book</> : <><Plus size={14} /> Add Book</>}
                 </Button>
                 <div className="space-y-2 mt-4">
-                  {books.length === 0 ? <p className="text-muted-foreground text-center py-4">No books yet. Add your first book above.</p> : books.map(b => (
-                    <div key={b.id} className="flex items-center justify-between bg-muted p-3 rounded text-sm">
+                  {books.length === 0 ? <p className="text-gray-400 text-center py-4">No books yet.</p> : books.map(b => (
+                    <div key={b.id} className="flex items-center justify-between bg-gray-700/50 p-3 rounded text-sm">
                       <div className="flex items-center gap-2">
                         {b.cover_image && <img src={b.cover_image} alt="" className="h-8 w-8 object-cover rounded" />}
                         <span className="font-medium">{b.title}</span>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => { setEditBook(b); setEditingId(b.id!); }} className="text-accent hover:text-foreground"><Edit2 size={14} /></button>
-                        <button onClick={() => deleteBook(b.id!)} className="text-destructive hover:text-foreground"><Trash2 size={14} /></button>
+                        <button onClick={() => { setEditBook(b); setEditingId(b.id!); }} className="text-gold hover:text-gold/80"><Edit2 size={14} /></button>
+                        <button onClick={() => deleteBook(b.id!)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   ))}
@@ -450,6 +557,7 @@ const AdminPage = () => {
               </div>
             )}
 
+            {/* News */}
             {dbSubTab === 'news' && (
               <div className="space-y-4">
                 <input className={inputClass} placeholder="Title" value={editNews.title} onChange={e => setEditNews({ ...editNews, title: e.target.value })} />
@@ -458,12 +566,12 @@ const AdminPage = () => {
                   {editingId ? <><Save size={14} /> Update News</> : <><Plus size={14} /> Add News</>}
                 </Button>
                 <div className="space-y-2 mt-4">
-                  {news.length === 0 ? <p className="text-muted-foreground text-center py-4">No news posts yet.</p> : news.map(n => (
-                    <div key={n.id} className="flex items-center justify-between bg-muted p-3 rounded text-sm">
+                  {news.length === 0 ? <p className="text-gray-400 text-center py-4">No news posts yet.</p> : news.map(n => (
+                    <div key={n.id} className="flex items-center justify-between bg-gray-700/50 p-3 rounded text-sm">
                       <span className="font-medium">{n.title}</span>
                       <div className="flex gap-2">
-                        <button onClick={() => { setEditNews(n); setEditingId(n.id!); }} className="text-accent hover:text-foreground"><Edit2 size={14} /></button>
-                        <button onClick={() => deleteNews(n.id!)} className="text-destructive hover:text-foreground"><Trash2 size={14} /></button>
+                        <button onClick={() => { setEditNews(n); setEditingId(n.id!); }} className="text-gold hover:text-gold/80"><Edit2 size={14} /></button>
+                        <button onClick={() => deleteNews(n.id!)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   ))}
@@ -471,6 +579,7 @@ const AdminPage = () => {
               </div>
             )}
 
+            {/* Upcoming */}
             {dbSubTab === 'upcoming' && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -486,19 +595,48 @@ const AdminPage = () => {
                   {editingId ? <><Save size={14} /> Update</> : <><Plus size={14} /> Add Upcoming</>}
                 </Button>
                 <div className="space-y-2 mt-4">
-                  {upcoming.length === 0 ? <p className="text-muted-foreground text-center py-4">No upcoming books yet.</p> : upcoming.map(u => (
-                    <div key={u.id} className="flex items-center justify-between bg-muted p-3 rounded text-sm">
+                  {upcoming.length === 0 ? <p className="text-gray-400 text-center py-4">No upcoming books yet.</p> : upcoming.map(u => (
+                    <div key={u.id} className="flex items-center justify-between bg-gray-700/50 p-3 rounded text-sm">
                       <div className="flex items-center gap-2">
                         {u.cover_image && <img src={u.cover_image} alt="" className="h-8 w-8 object-cover rounded" />}
                         <span className="font-medium">{u.title}</span>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => { setEditUpcoming(u); setEditingId(u.id!); }} className="text-accent hover:text-foreground"><Edit2 size={14} /></button>
-                        <button onClick={() => deleteUpcoming(u.id!)} className="text-destructive hover:text-foreground"><Trash2 size={14} /></button>
+                        <button onClick={() => { setEditUpcoming(u); setEditingId(u.id!); }} className="text-gold hover:text-gold/80"><Edit2 size={14} /></button>
+                        <button onClick={() => deleteUpcoming(u.id!)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Contact Messages */}
+            {dbSubTab === 'contacts' && (
+              <div className="space-y-4">
+                {contacts.length === 0 ? <p className="text-gray-400 text-center py-4">No messages yet.</p> : (
+                  <div className="grid gap-3">
+                    {contacts.map(msg => (
+                      <div key={msg.id} className="bg-gray-700/50 p-4 rounded-lg">
+                        <div className="flex justify-between items-start flex-wrap gap-2">
+                          <div>
+                            <p className="font-semibold text-gold">{msg.name}</p>
+                            <p className="text-sm text-gray-400">{msg.email}</p>
+                            <p className="mt-2 text-sm text-gray-300">{msg.message}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-1 rounded-full ${msg.replied ? 'bg-green-600' : 'bg-yellow-600'}`}>
+                              {msg.replied ? 'Replied' : 'Pending'}
+                            </span>
+                            <button onClick={() => toggleReplied(msg.id!, msg.replied)} className="text-gold hover:text-gold/80">
+                              <Reply size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -507,38 +645,48 @@ const AdminPage = () => {
         {/* CONTENT TAB */}
         {activeTab === 'content' && (
           <div className="space-y-6">
+            {/* Reviews section */}
             <div>
-              <h3 className="font-display text-lg mb-3 flex items-center gap-2"><Eye size={18} /> Pending Reviews</h3>
-              {reviews.filter(r => !r.approved).length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No pending reviews.</p>
+              <h3 className="font-display text-lg mb-3 flex items-center gap-2"><Eye size={18} /> Manage Reviews</h3>
+              {reviews.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No reviews yet.</p>
               ) : (
-                reviews.filter(r => !r.approved).map(r => (
-                  <div key={r.id} className="bg-muted p-3 rounded mb-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">{r.reviewer_name} (⭐ {r.rating}/5)</span>
-                      <div className="flex gap-2">
-                        <button onClick={() => approveReview(r.id!, true)} className="text-green-500 hover:text-green-400"><CheckCircle size={16} /></button>
-                        <button onClick={() => approveReview(r.id!, false)} className="text-red-500 hover:text-red-400"><X size={16} /></button>
+                reviews.map(r => (
+                  <div key={r.id} className="bg-gray-700/50 p-3 rounded mb-2 text-sm">
+                    <div className="flex justify-between flex-wrap gap-2">
+                      <div>
+                        <span className="font-semibold">{r.reviewer_name} (⭐ {r.rating}/5)</span>
+                        <p className="mt-1">{r.review_text}</p>
+                      </div>
+                      <div className="flex gap-2 items-start">
+                        {!r.approved && (
+                          <button onClick={() => approveReview(r.id!, true)} className="text-green-500 hover:text-green-400"><CheckCircle size={16} /></button>
+                        )}
+                        {r.approved && (
+                          <button onClick={() => approveReview(r.id!, false)} className="text-yellow-500 hover:text-yellow-400"><EyeOff size={16} /></button>
+                        )}
+                        <button onClick={() => deleteReview(r.id!)} className="text-red-400 hover:text-red-300"><Trash2 size={16} /></button>
                       </div>
                     </div>
-                    <p className="mt-1">{r.review_text}</p>
+                    <p className="text-xs text-gray-400 mt-1">{r.approved ? 'Approved' : 'Pending approval'}</p>
                   </div>
                 ))
               )}
             </div>
             <div>
               <h3 className="font-display text-lg mb-3">Live Pages Content</h3>
-              <p className="text-sm text-muted-foreground mb-2">Quick links to edit content that appears on the frontend:</p>
+              <p className="text-sm text-gray-400 mb-2">Quick links to edit content that appears on the frontend:</p>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('books'); }}><BookOpen size={14} className="mr-2" /> Edit Books</Button>
                 <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('news'); }}><Newspaper size={14} className="mr-2" /> Edit News</Button>
                 <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('upcoming'); }}><Clock size={14} className="mr-2" /> Edit Upcoming</Button>
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('contacts'); }}><Mail size={14} className="mr-2" /> View Contact Messages</Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* LOGS TAB */}
+        {/* LOGS TAB – Only the detailed logs, separate from toggle panel */}
         {activeTab === 'logs' && (
           <div>
             <div className="flex gap-2 mb-4">
@@ -547,14 +695,14 @@ const AdminPage = () => {
             </div>
             {logsSubTab === 'activity' && (
               <div className="overflow-auto max-h-96">
-                {logs.length === 0 ? <p className="text-muted-foreground text-center py-4">No activity logged yet.</p> : (
+                {logs.length === 0 ? <p className="text-gray-400 text-center py-4">No activity logged yet.</p> : (
                   <table className="w-full text-sm">
-                    <thead className="text-left text-muted-foreground border-b border-border">
+                    <thead className="text-left text-gray-400 border-b border-gray-700">
                       <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
                     </thead>
                     <tbody>
                       {logs.map(l => (
-                        <tr key={l.id} className="border-b border-border/50">
+                        <tr key={l.id} className="border-b border-gray-700/50">
                           <td className="py-2">{new Date(l.created_at).toLocaleString()}</td>
                           <td>{l.admin_user}</td>
                           <td>{l.action}</td>
@@ -569,10 +717,10 @@ const AdminPage = () => {
             )}
             {logsSubTab === 'errors' && (
               <div className="overflow-auto max-h-96">
-                {errors.length === 0 ? <p className="text-muted-foreground text-center py-4">No errors recorded.</p> : (
+                {errors.length === 0 ? <p className="text-gray-400 text-center py-4">No errors recorded.</p> : (
                   errors.map(e => (
                     <div key={e.id} className="bg-red-900/20 border border-red-500/30 p-3 rounded mb-2 text-sm">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
                         <span>{new Date(e.created_at).toLocaleString()}</span>
                         <span>{e.url}</span>
                       </div>
