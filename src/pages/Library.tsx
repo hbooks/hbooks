@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react';
 import { User, BookOpen, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSignedUrl } from '@/lib/supabase';
 import gildedCageCover from '@/assets/gilded-cage-cover.png';
 import trappedCover from '@/assets/trapped-cover.png';
 
 interface Book {
   id: number;
   title: string;
-  cover_image: string;
+  cover_image: string;      // stored path or URL
+  cover_image_url?: string; // signed URL (if from bucket)
   description: string;
-  ubl_link?: string;
+  ubl?: string;             // changed from ubl_link
   series?: string;
 }
 
 interface UpcomingBook {
   id: number;
   title: string;
-  cover_image: string;
+  cover_image: string;      // stored path or URL
+  cover_image_url?: string; // signed URL (if from bucket)
   description: string;
   estimated_date: string;
 }
@@ -28,7 +30,7 @@ const fallbackBooks: Book[] = [
     title: 'The Gilded Cage',
     cover_image: gildedCageCover,
     description: 'Remy Sot has spent four years at university chasing two dreams: making his parents proud, and winning the girl he loves. But when graduation brings rejection instead of romance, he\'s forced to confront a lifetime of emotional miscalculation.',
-    ubl_link: 'https://books2read.com/u/mgQwZK',
+    ubl: 'https://books2read.com/u/mgQwZK',
     series: 'Lovely Strangers, Book 1',
   },
 ];
@@ -55,27 +57,66 @@ const Library = () => {
   const [upcoming, setUpcoming] = useState<UpcomingBook[]>(fallbackUpcoming);
 
   useEffect(() => {
-    supabase
-      .from('books')
-      .select('*')
-      .eq('published', true)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) setBooks(data);
-      });
+    const fetchBooks = async () => {
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .eq('published', true)
+        .order('created_at', { ascending: false });
 
-    supabase
-      .from('upcoming_books')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) setUpcoming(data);
-      });
+      if (error || !data) return;
+
+      // Generate signed URLs for covers stored in private bucket
+      const booksWithUrls = await Promise.all(
+        data.map(async (book: Book) => {
+          // If cover_image looks like a storage path (no http:// or data:), get signed URL
+          const isStoredPath = book.cover_image && 
+            !book.cover_image.startsWith('http') && 
+            !book.cover_image.startsWith('data:') &&
+            !book.cover_image.startsWith('/');
+          if (isStoredPath) {
+            const signedUrl = await getSignedUrl(book.cover_image);
+            return { ...book, cover_image_url: signedUrl };
+          }
+          return { ...book, cover_image_url: book.cover_image };
+        })
+      );
+      setBooks(booksWithUrls);
+    };
+
+    const fetchUpcoming = async () => {
+      const { data, error } = await supabase
+        .from('upcoming_books')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return;
+
+      const upcomingWithUrls = await Promise.all(
+        data.map(async (book: UpcomingBook) => {
+          const isStoredPath = book.cover_image && 
+            !book.cover_image.startsWith('http') && 
+            !book.cover_image.startsWith('data:') &&
+            !book.cover_image.startsWith('/');
+          if (isStoredPath) {
+            const signedUrl = await getSignedUrl(book.cover_image);
+            return { ...book, cover_image_url: signedUrl };
+          }
+          return { ...book, cover_image_url: book.cover_image };
+        })
+      );
+      setUpcoming(upcomingWithUrls);
+    };
+
+    fetchBooks();
+    fetchUpcoming();
   }, []);
 
-  const getCoverSrc = (img: string) => {
-    if (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:')) return img;
-    return img;
+  // Helper to get image src: prefer cover_image_url if available, otherwise cover_image
+  const getCoverSrc = (book: Book | UpcomingBook) => {
+    const url = 'cover_image_url' in book ? book.cover_image_url : (book as any).cover_image;
+    if (url && url.startsWith('http')) return url;
+    return (book as any).cover_image;
   };
 
   return (
@@ -99,7 +140,7 @@ const Library = () => {
             {books.map(book => (
               <div key={book.id} className="flex flex-col sm:flex-row gap-8 bg-card p-6 rounded-lg shadow-md border border-border">
                 <img
-                  src={getCoverSrc(book.cover_image)}
+                  src={getCoverSrc(book)}
                   alt={book.title}
                   className="w-40 h-auto rounded-md shadow-lg flex-shrink-0 mx-auto sm:mx-0"
                 />
@@ -107,9 +148,9 @@ const Library = () => {
                   <h3 className="font-display text-2xl mb-1">{book.title}</h3>
                   {book.series && <p className="text-accent italic text-sm mb-3">{book.series}</p>}
                   <p className="leading-relaxed text-foreground opacity-80 mb-4">{book.description}</p>
-                  {book.ubl_link && (
+                  {book.ubl && (
                     <Button variant="hero" size="sm" asChild>
-                      <a href={book.ubl_link} target="_blank" rel="noopener noreferrer">
+                      <a href={book.ubl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={14} /> Get the Book
                       </a>
                     </Button>
@@ -129,7 +170,7 @@ const Library = () => {
             {upcoming.map(book => (
               <div key={book.id} className="bg-secondary text-secondary-foreground p-6 rounded-lg shadow-md">
                 <img
-                  src={getCoverSrc(book.cover_image)}
+                  src={getCoverSrc(book)}
                   alt={book.title}
                   className="w-full h-64 object-cover rounded-md mb-4"
                 />
