@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { Moon, Star } from 'lucide-react'; // added Moon and Star icons
 import bookCover from '@/assets/gilded-cage-cover.png';
 
 interface NewsPost {
@@ -33,19 +34,6 @@ const Particles = () => (
       />
     ))}
   </div>
-  
-// Holiday update
-<div class="bg-card border-l-4 border-accent p-6 my-8 rounded-lg shadow-md">
-  <div class="flex flex-col sm:flex-row items-center gap-4">
-    <div class="text-4xl">🌙✨</div>
-    <div>
-      <h3 class="font-display text-xl text-accent">Eid Mubarak</h3>
-      <p class="text-muted-foreground">
-        Wishing you and your loved ones a blessed and joyous celebration. May this special time bring peace, happiness, and inspiration.
-      </p>
-    </div>
-  </div>
-</div>
 );
 
 const Index = () => {
@@ -66,6 +54,7 @@ const Index = () => {
 
   return (
     <>
+      {/* Hero section (unchanged) */}
       <section className="hero-gradient min-h-[85vh] flex items-center justify-center px-4">
         <Particles />
         <div className="container mx-auto flex flex-col md:flex-row items-center gap-12 relative z-10">
@@ -96,6 +85,24 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Holiday message section – add new messages here */}
+      <section className="py-8 px-4">
+        <div className="container mx-auto max-w-3xl">
+          <div className="bg-card border-l-4 border-accent p-6 rounded-lg shadow-md">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Moon size={40} className="text-accent" />
+              <div>
+                <h3 className="font-display text-xl text-accent">Eid Mubarak</h3>
+                <p className="text-muted-foreground">
+                  Wishing you and your loved ones a blessed and joyous celebration. May this special time bring peace, happiness, and inspiration.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Latest News section (unchanged) */}
       <section className="py-16 px-4">
         <div className="container mx-auto text-center">
           <h2 className="font-display text-3xl md:text-4xl mb-8">Latest from the Desk</h2>
