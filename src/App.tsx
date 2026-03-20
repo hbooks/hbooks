@@ -18,7 +18,7 @@ import Support from "./pages/Support";
 import ThankYou from "./pages/ThankYou";
 import Library from "./pages/Library";
 import NonDiscordForm from "./pages/NonDiscordForm";
-import AdminPage from './pages/AdminPage';
+//import AdminPage from './pages/AdminPage';
 import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
@@ -27,7 +27,7 @@ import { supabase } from "@/lib/supabase";
 const queryClient = new QueryClient();
 
 // Layout component that conditionally shows Navbar and Footer
-const Layout = ({ children }: { children: React.ReactNode }) => {
+/*const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const isAdminRoute = location.pathname === '/ir806';
 
@@ -68,7 +68,7 @@ const App = () => {
       window.onerror = originalErrorHandler;
     };
   }, []);
-
+*/
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
