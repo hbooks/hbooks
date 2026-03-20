@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -19,47 +19,105 @@ import {
   AlertCircle,
   User,
   Clock,
+  BookOpen,
+  Newspaper,
+  Layout,
+  FileText,
+  RefreshCw,
+  Crown,
 } from 'lucide-react';
 
-type TableName = 'books' | 'upcoming_books' | 'reviews' | 'contact_messages' | 'admin_logs';
+type Tab = 'hbdb' | 'content' | 'logs';
+type DbSubTab = 'books' | 'news' | 'upcoming';
+type LogsSubTab = 'activity' | 'errors';
 
-interface Column {
-  name: string;
-  type: string;
+interface Book {
+  id?: number;
+  title: string;
+  cover_image: string;
+  description: string;
+  ubl_link: string;
+  series: string;
+  published: boolean;
+}
+
+interface News {
+  id?: number;
+  title: string;
+  content: string;
+  date: string;
+  published: boolean;
+}
+
+interface Upcoming {
+  id?: number;
+  title: string;
+  cover_image: string;
+  description: string;
+  estimated_date: string;
+  published: boolean;
+}
+
+interface Review {
+  id?: number;
+  reviewer_name: string;
+  review_text: string;
+  rating: number;
+  approved: boolean;
+}
+
+interface AdminLog {
+  id: number;
+  admin_user: string;
+  action: string;
+  table_name: string;
+  record_id: number;
+  details: any;
+  created_at: string;
+}
+
+interface SystemError {
+  id: number;
+  error_message: string;
+  error_stack: string;
+  url: string;
+  user_agent: string;
+  created_at: string;
 }
 
 const BUCKET_NAME = 'covers';
+const ADMIN_EMAIL = 'admin@hpbooks.uk';
 
 const AdminPage = () => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
 
-  const [activeTable, setActiveTable] = useState<TableName>('books');
-  const [tableData, setTableData] = useState<any[]>([]);
-  const [tableColumns, setTableColumns] = useState<Column[]>([]);
-  const [editingRow, setEditingRow] = useState<any | null>(null);
-  const [newRow, setNewRow] = useState<any | null>(null);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [showLogs, setShowLogs] = useState(false);
+  // UI state
+  const [activeTab, setActiveTab] = useState<Tab>('hbdb');
+  const [dbSubTab, setDbSubTab] = useState<DbSubTab>('books');
+  const [logsSubTab, setLogsSubTab] = useState<LogsSubTab>('activity');
+
+  // Data states
+  const [books, setBooks] = useState<Book[]>([]);
+  const [news, setNews] = useState<News[]>([]);
+  const [upcoming, setUpcoming] = useState<Upcoming[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
+  const [errors, setErrors] = useState<SystemError[]>([]);
+
+  // Editing states
+  const [editBook, setEditBook] = useState<Book>({ title: '', cover_image: '', description: '', ubl_link: '', series: '', published: true });
+  const [editNews, setEditNews] = useState<News>({ title: '', content: '', date: new Date().toISOString().slice(0, 16), published: true });
+  const [editUpcoming, setEditUpcoming] = useState<Upcoming>({ title: '', cover_image: '', description: '', estimated_date: '', published: true });
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Toast & logout popup
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
-  const [logoutPopup, setLogoutPopup] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  const navigate = useNavigate();
-
-  // Update time
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Auth
+  // Auth session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -73,49 +131,36 @@ const AdminPage = () => {
 
   // Fetch data when authenticated
   useEffect(() => {
-    if (session) {
-      fetchTableData(activeTable);
-      fetchLogs();
+    if (session?.user?.email === ADMIN_EMAIL) {
+      fetchData();
     }
-  }, [session, activeTable]);
+  }, [session]);
 
-  const fetchTableData = async (table: TableName) => {
-    const { data, error } = await supabase.from(table).select('*');
-    if (error) {
-      showToast('error', `Failed to fetch ${table}`);
-      return;
-    }
-    setTableData(data || []);
-
-    if (data && data.length > 0) {
-      setTableColumns(Object.keys(data[0]).map(key => ({ name: key, type: typeof data[0][key] })));
-    } else {
-      // Fallback: get columns from information_schema
-      const { data: columns } = await supabase
-        .from('information_schema.columns')
-        .select('column_name, data_type')
-        .eq('table_name', table)
-        .eq('table_schema', 'public');
-      if (columns) {
-        setTableColumns(columns.map(c => ({ name: c.column_name, type: c.data_type })));
-      }
-    }
-  };
-
-  const fetchLogs = async () => {
-    const { data } = await supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(50);
-    setLogs(data || []);
+  const fetchData = async () => {
+    const [booksRes, newsRes, upcomingRes, reviewsRes, logsRes, errorsRes] = await Promise.all([
+      supabase.from('books').select('*').order('created_at', { ascending: false }),
+      supabase.from('news_posts').select('*').order('date', { ascending: false }),
+      supabase.from('upcoming_books').select('*').order('created_at', { ascending: false }),
+      supabase.from('reviews').select('*').order('created_at', { ascending: false }),
+      supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100),
+      supabase.from('system_errors').select('*').order('created_at', { ascending: false }).limit(100),
+    ]);
+    if (booksRes.data) setBooks(booksRes.data);
+    if (newsRes.data) setNews(newsRes.data);
+    if (upcomingRes.data) setUpcoming(upcomingRes.data);
+    if (reviewsRes.data) setReviews(reviewsRes.data);
+    if (logsRes.data) setLogs(logsRes.data);
+    if (errorsRes.data) setErrors(errorsRes.data);
   };
 
   const logAction = async (action: string, table: string, recordId?: number, details?: any) => {
     await supabase.from('admin_logs').insert({
-      admin_user: session?.user?.email || 'admin',
+      admin_user: session?.user?.email,
       action,
       table_name: table,
       record_id: recordId,
       details,
     });
-    fetchLogs();
   };
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -136,131 +181,159 @@ const AdminPage = () => {
   };
 
   const handleLogout = async () => {
-    setLogoutPopup(true);
-  };
-
-  const confirmLogout = async () => {
     await supabase.auth.signOut();
-    setLogoutPopup(false);
-    showToast('success', 'Logged out successfully');
     navigate('/');
   };
 
-  // File upload handler – stores file path
-  const handleFileUpload = async (file: File, currentRow: any, isNew: boolean) => {
-    if (!file || !session) return;
-
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!file) return null;
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      // Store files under a folder per table? We'll just keep in root.
       const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Store only the file path in the database
-      if (isNew) {
-        setNewRow({ ...newRow, cover_image: filePath });
-      } else {
-        setEditingRow({ ...editingRow, cover_image: filePath });
-      }
-      showToast('success', 'Image uploaded');
+      const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
+      if (error) throw error;
+      return filePath;
     } catch (error: any) {
-      showToast('error', `Upload failed: ${error.message}`);
+      showToast('error', 'Upload failed: ' + error.message);
+      return null;
     } finally {
       setUploading(false);
     }
   };
 
-  // Get signed URL for preview
-  const getSignedUrl = async (filePath: string) => {
-    const { data } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(filePath, 60); // valid 60 seconds
+  const getSignedUrl = async (path: string) => {
+    const { data } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(path, 60);
     return data?.signedUrl;
   };
 
-  // Preview component
-  const ImagePreview = ({ filePath }: { filePath: string }) => {
-    const [url, setUrl] = useState<string | null>(null);
+  // Books CRUD
+  const saveBook = async () => {
+    if (!editBook.title) return;
+    const data = { ...editBook };
+    if (editingId) {
+      const { error } = await supabase.from('books').update(data).eq('id', editingId);
+      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
+      showToast('success', 'Book updated');
+      await logAction('UPDATE', 'books', editingId, data);
+    } else {
+      const { error } = await supabase.from('books').insert(data);
+      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
+      showToast('success', 'Book added');
+      await logAction('INSERT', 'books', undefined, data);
+    }
+    setEditBook({ title: '', cover_image: '', description: '', ubl_link: '', series: '', published: true });
+    setEditingId(null);
+    fetchData();
+  };
+
+  const deleteBook = async (id: number) => {
+    if (!confirm('Delete this book?')) return;
+    await supabase.from('books').delete().eq('id', id);
+    showToast('success', 'Book deleted');
+    await logAction('DELETE', 'books', id);
+    fetchData();
+  };
+
+  // News CRUD
+  const saveNews = async () => {
+    if (!editNews.title) return;
+    const data = { ...editNews };
+    if (editingId) {
+      const { error } = await supabase.from('news_posts').update(data).eq('id', editingId);
+      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
+      showToast('success', 'News updated');
+      await logAction('UPDATE', 'news_posts', editingId, data);
+    } else {
+      const { error } = await supabase.from('news_posts').insert(data);
+      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
+      showToast('success', 'News published');
+      await logAction('INSERT', 'news_posts', undefined, data);
+    }
+    setEditNews({ title: '', content: '', date: new Date().toISOString().slice(0, 16), published: true });
+    setEditingId(null);
+    fetchData();
+  };
+
+  const deleteNews = async (id: number) => {
+    if (!confirm('Delete this news?')) return;
+    await supabase.from('news_posts').delete().eq('id', id);
+    showToast('success', 'News deleted');
+    await logAction('DELETE', 'news_posts', id);
+    fetchData();
+  };
+
+  // Upcoming CRUD
+  const saveUpcoming = async () => {
+    if (!editUpcoming.title) return;
+    const data = { ...editUpcoming };
+    if (editingId) {
+      const { error } = await supabase.from('upcoming_books').update(data).eq('id', editingId);
+      if (error) { showToast('error', 'Update failed: ' + error.message); return; }
+      showToast('success', 'Upcoming updated');
+      await logAction('UPDATE', 'upcoming_books', editingId, data);
+    } else {
+      const { error } = await supabase.from('upcoming_books').insert(data);
+      if (error) { showToast('error', 'Insert failed: ' + error.message); return; }
+      showToast('success', 'Upcoming added');
+      await logAction('INSERT', 'upcoming_books', undefined, data);
+    }
+    setEditUpcoming({ title: '', cover_image: '', description: '', estimated_date: '', published: true });
+    setEditingId(null);
+    fetchData();
+  };
+
+  const deleteUpcoming = async (id: number) => {
+    if (!confirm('Delete this upcoming?')) return;
+    await supabase.from('upcoming_books').delete().eq('id', id);
+    showToast('success', 'Upcoming deleted');
+    await logAction('DELETE', 'upcoming_books', id);
+    fetchData();
+  };
+
+  // Reviews approval
+  const approveReview = async (id: number, approve: boolean) => {
+    const { error } = await supabase.from('reviews').update({ approved: approve }).eq('id', id);
+    if (error) { showToast('error', 'Error updating review'); return; }
+    showToast('success', approve ? 'Review approved' : 'Review rejected');
+    await logAction(approve ? 'APPROVE' : 'REJECT', 'reviews', id);
+    fetchData();
+  };
+
+  // Image picker component
+  const ImagePicker = ({ value, onChange }: { value: string; onChange: (url: string) => void }) => {
+    const [preview, setPreview] = useState<string | null>(null);
     useEffect(() => {
-      if (filePath) {
-        getSignedUrl(filePath).then(setUrl);
-      }
-    }, [filePath]);
-    if (!url) return <div className="h-12 w-12 bg-gray-700 rounded animate-pulse"></div>;
-    return <img src={url} alt="Cover" className="h-12 w-auto object-cover rounded shadow" />;
+      if (value) getSignedUrl(value).then(setPreview);
+    }, [value]);
+    return (
+      <div className="flex gap-2 items-center">
+        {preview && <img src={preview} alt="preview" className="h-12 w-auto object-cover rounded shadow" />}
+        <label className="cursor-pointer bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+          <Upload size={12} /> Upload
+          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              const path = await uploadImage(file);
+              if (path) onChange(path);
+            }
+          }} />
+        </label>
+        {uploading && <span className="text-xs text-gray-400">Uploading...</span>}
+      </div>
+    );
   };
-
-  const handleInsert = async () => {
-    if (!newRow) return;
-    // Remove any undefined fields (like id)
-    const cleanedRow = { ...newRow };
-    delete cleanedRow.id;
-    const { data, error } = await supabase.from(activeTable).insert(cleanedRow).select();
-    if (error) {
-      showToast('error', `Insert failed: ${error.message}`);
-      return;
-    }
-    setNewRow(null);
-    fetchTableData(activeTable);
-    logAction('INSERT', activeTable, data?.[0]?.id, cleanedRow);
-    showToast('success', 'Record added');
-  };
-
-  const handleUpdate = async () => {
-    if (!editingRow || !editingRow.id) return;
-    const { id, ...updates } = editingRow;
-    const { error } = await supabase.from(activeTable).update(updates).eq('id', id);
-    if (error) {
-      showToast('error', `Update failed: ${error.message}`);
-      return;
-    }
-    setEditingRow(null);
-    fetchTableData(activeTable);
-    logAction('UPDATE', activeTable, id, updates);
-    showToast('success', 'Record updated');
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this record?')) return;
-    const { error } = await supabase.from(activeTable).delete().eq('id', id);
-    if (error) {
-      showToast('error', `Delete failed: ${error.message}`);
-      return;
-    }
-    fetchTableData(activeTable);
-    logAction('DELETE', activeTable, id);
-    showToast('success', 'Record deleted');
-  };
-
-  const toggleBoolean = async (row: any, column: string) => {
-    const newValue = !row[column];
-    const { error } = await supabase.from(activeTable).update({ [column]: newValue }).eq('id', row.id);
-    if (error) {
-      showToast('error', `Update failed: ${error.message}`);
-      return;
-    }
-    fetchTableData(activeTable);
-    logAction('UPDATE', activeTable, row.id, { [column]: newValue });
-    showToast('success', `${column} toggled`);
-  };
-
-  const isImageColumn = (colName: string) => colName === 'cover_image';
 
   if (loading) {
     return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gold animate-pulse">Loading admin panel...</div>;
   }
 
+  // Not logged in – show login form
   if (!session) {
-    // Login page (beautiful as before)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* animated blobs... (same as previous) */}
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 w-full max-w-md shadow-2xl z-10">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 w-full max-w-md shadow-2xl">
           <h2 className="font-display text-3xl text-white text-center mb-8">Admin Access</h2>
           <form onSubmit={handleLogin} className="space-y-5">
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-2 rounded-lg bg-gray-800/50 border border-gray-600 text-white" />
@@ -269,12 +342,28 @@ const AdminPage = () => {
             {loginError && <p className="text-red-400 text-sm text-center">{loginError}</p>}
           </form>
         </div>
-        {toast.type && <div className="fixed bottom-4 right-4 z-50 bg-{toast.type === 'success' ? 'green' : 'red'}-600 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in-up flex items-center gap-2">{toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}{toast.message}</div>}
       </div>
     );
   }
 
-  // Main admin dashboard (custom header, etc.)
+  // Logged in but not admin email
+  if (session.user.email !== ADMIN_EMAIL) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl text-center">
+          <h2 className="text-2xl font-display text-white mb-4">Access Denied</h2>
+          <p className="text-gray-300">You do not have permission to view this page.</p>
+          <Button onClick={() => supabase.auth.signOut()} className="mt-6 bg-gold text-black">Logout</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin dashboard (authenticated)
+  const inputClass = "w-full px-3 py-2 rounded border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent";
+  const tabClass = (tab: Tab) => `flex items-center gap-2 px-4 py-2 rounded-t text-sm font-semibold transition-colors ${activeTab === tab ? 'bg-card text-foreground' : 'bg-secondary text-secondary-foreground hover:text-accent'}`;
+  const subTabClass = (tab: string, current: string) => `px-3 py-1 text-sm rounded-full ${current === tab ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent/20'}`;
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Custom Admin Header */}
@@ -282,7 +371,7 @@ const AdminPage = () => {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center">
-              <User size={20} className="text-black" />
+              <Crown size={20} className="text-black" />
             </div>
             <div>
               <h1 className="font-display text-xl text-white">Admin Dashboard</h1>
@@ -290,237 +379,213 @@ const AdminPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <div className="hidden sm:flex items-center gap-2 text-gray-300">
-              <Clock size={16} />
-              <span className="text-sm font-mono">{format(currentTime, 'HH:mm:ss')}</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setShowLogs(!showLogs)} className="text-gray-300 hover:text-white">
-              <Database size={16} className="mr-2" />
-              {showLogs ? 'Hide Logs' : 'Show Logs'}
-            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-300 hover:text-white">
-              <LogOut size={16} className="mr-2" />
-              Logout
+              <LogOut size={16} className="mr-2" /> Logout
             </Button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        {/* Table Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {(['books', 'upcoming_books', 'reviews', 'contact_messages', 'admin_logs'] as TableName[]).map(table => (
-            <button
-              key={table}
-              onClick={() => setActiveTable(table)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                activeTable === table
-                  ? 'bg-gold text-black shadow-lg'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {table.replace('_', ' ')}
-            </button>
-          ))}
+        {/* Main Tabs */}
+        <div className="flex gap-1 border-b border-border mb-6">
+          <button className={tabClass('hbdb')} onClick={() => setActiveTab('hbdb')}><Database size={16} /> HB Database</button>
+          <button className={tabClass('content')} onClick={() => setActiveTab('content')}><Layout size={16} /> Content</button>
+          <button className={tabClass('logs')} onClick={() => setActiveTab('logs')}><FileText size={16} /> Logs</button>
         </div>
 
-        {/* Logs Panel */}
-        {showLogs && (
-          <div className="bg-gray-800 rounded-xl p-4 mb-6 max-h-80 overflow-auto border border-gray-700">
-            <h3 className="font-display text-lg text-gold mb-3">Recent Activity</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-gray-700"><th className="text-left py-2 text-gray-400">Time</th><th>Action</th><th>Table</th><th>Record ID</th><th>Details</th></tr></thead>
-                <tbody>
-                  {logs.map(log => (
-                    <tr key={log.id} className="border-b border-gray-700/50">
-                      <td className="py-2">{new Date(log.created_at).toLocaleString()}</td>
-                      <td>{log.action}</td>
-                      <td>{log.table_name}</td>
-                      <td>{log.record_id || '-'}</td>
-                      <td className="max-w-xs truncate">{JSON.stringify(log.details)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Toast */}
+        {toast.type && (
+          <div className="fixed bottom-4 right-4 z-50 animate-fade-in-up">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white`}>
+              {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+              {toast.message}
             </div>
           </div>
         )}
 
-        {/* Data Table */}
-        <div className="bg-gray-800 rounded-xl overflow-hidden shadow-xl border border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-900">
-                <tr>
-                  {tableColumns.map(col => (
-                    <th key={col.name} className="px-4 py-3 text-left font-semibold text-gray-300 capitalize">
-                      {col.name.replace('_', ' ')}
-                    </th>
+        {/* HB DATABASE TAB */}
+        {activeTab === 'hbdb' && (
+          <div>
+            <div className="flex gap-2 mb-4">
+              {(['books', 'news', 'upcoming'] as const).map(tab => (
+                <button key={tab} className={subTabClass(tab, dbSubTab)} onClick={() => { setDbSubTab(tab); setEditingId(null); }}>
+                  {tab === 'books' && <BookOpen size={14} />}
+                  {tab === 'news' && <Newspaper size={14} />}
+                  {tab === 'upcoming' && <Clock size={14} />}
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {dbSubTab === 'books' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input className={inputClass} placeholder="Title" value={editBook.title} onChange={e => setEditBook({ ...editBook, title: e.target.value })} />
+                  <input className={inputClass} placeholder="Series" value={editBook.series} onChange={e => setEditBook({ ...editBook, series: e.target.value })} />
+                  <div className="col-span-2 flex gap-2 items-center">
+                    <input className={inputClass} placeholder="Cover image path" value={editBook.cover_image} onChange={e => setEditBook({ ...editBook, cover_image: e.target.value })} />
+                    <ImagePicker value={editBook.cover_image} onChange={(url) => setEditBook({ ...editBook, cover_image: url })} />
+                  </div>
+                  <input className={inputClass} placeholder="UBL Link" value={editBook.ubl_link} onChange={e => setEditBook({ ...editBook, ubl_link: e.target.value })} />
+                </div>
+                <textarea className={inputClass + ' resize-none'} rows={3} placeholder="Description" value={editBook.description} onChange={e => setEditBook({ ...editBook, description: e.target.value })} />
+                <Button variant="hero" size="sm" onClick={saveBook}>
+                  {editingId ? <><Save size={14} /> Update Book</> : <><Plus size={14} /> Add Book</>}
+                </Button>
+                <div className="space-y-2 mt-4">
+                  {books.length === 0 ? <p className="text-muted-foreground text-center py-4">No books yet. Add your first book above.</p> : books.map(b => (
+                    <div key={b.id} className="flex items-center justify-between bg-muted p-3 rounded text-sm">
+                      <div className="flex items-center gap-2">
+                        {b.cover_image && <img src={b.cover_image} alt="" className="h-8 w-8 object-cover rounded" />}
+                        <span className="font-medium">{b.title}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditBook(b); setEditingId(b.id!); }} className="text-accent hover:text-foreground"><Edit2 size={14} /></button>
+                        <button onClick={() => deleteBook(b.id!)} className="text-destructive hover:text-foreground"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
                   ))}
-                  <th className="px-4 py-3 text-left text-gray-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* New row input */}
-                {newRow && (
-                  <tr className="bg-gray-700/50">
-                    {tableColumns.map(col => (
-                      <td key={col.name} className="px-4 py-2 border-b border-gray-700">
-                        {col.name === 'id' ? (
-                          <span className="text-gray-400">auto</span>
-                        ) : isImageColumn(col.name) ? (
-                          <div className="flex flex-col gap-2">
-                            {newRow.cover_image && <ImagePreview filePath={newRow.cover_image} />}
-                            <div className="flex gap-2 items-center">
-                              <label className="cursor-pointer bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                                <Upload size={12} />
-                                Upload
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) await handleFileUpload(file, newRow, true);
-                                  }}
-                                  className="hidden"
-                                />
-                              </label>
-                              {uploading && <span className="text-xs text-gray-400">Uploading...</span>}
-                            </div>
-                          </div>
-                        ) : col.type.includes('bool') ? (
-                          <input type="checkbox" checked={newRow[col.name] || false} onChange={e => setNewRow({ ...newRow, [col.name]: e.target.checked })} className="w-4 h-4 accent-gold" />
-                        ) : (
-                          <input type="text" value={newRow[col.name] || ''} onChange={e => setNewRow({ ...newRow, [col.name]: e.target.value })} className="w-full px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-gold" />
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-4 py-2 border-b border-gray-700">
-                      <button onClick={handleInsert} className="text-green-400 hover:text-green-300 mr-2" disabled={uploading}><Save size={16} /></button>
-                      <button onClick={() => setNewRow(null)} className="text-red-400 hover:text-red-300"><X size={16} /></button>
-                    </td>
-                  </tr>
-                )}
+                </div>
+              </div>
+            )}
 
-                {/* Existing rows */}
-                {tableData.map(row => (
-                  <tr key={row.id} className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors">
-                    {tableColumns.map(col => {
-                      const isEditing = editingRow?.id === row.id;
-                      const value = row[col.name];
-                      return (
-                        <td key={col.name} className="px-4 py-2">
-                          {isEditing ? (
-                            col.name === 'id' ? (
-                              value
-                            ) : isImageColumn(col.name) ? (
-                              <div className="flex flex-col gap-2">
-                                {editingRow.cover_image && <ImagePreview filePath={editingRow.cover_image} />}
-                                <div className="flex gap-2 items-center">
-                                  <label className="cursor-pointer bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                                    <Upload size={12} />
-                                    Upload
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) await handleFileUpload(file, row, false);
-                                      }}
-                                      className="hidden"
-                                    />
-                                  </label>
-                                  {uploading && <span className="text-xs text-gray-400">Uploading...</span>}
-                                </div>
-                              </div>
-                            ) : col.type.includes('bool') ? (
-                              <input type="checkbox" checked={editingRow[col.name] || false} onChange={e => setEditingRow({ ...editingRow, [col.name]: e.target.checked })} className="w-4 h-4 accent-gold" />
-                            ) : (
-                              <input type="text" value={editingRow[col.name] || ''} onChange={e => setEditingRow({ ...editingRow, [col.name]: e.target.value })} className="w-full px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-gold" />
-                            )
-                          ) : (
-                            <span className={col.type.includes('bool') ? (value ? 'text-green-400' : 'text-red-400') : 'text-gray-200'}>
-                              {isImageColumn(col.name) && value ? (
-                                <ImagePreview filePath={value} />
-                              ) : col.type.includes('bool') ? (
-                                value ? '✅' : '❌'
-                              ) : (
-                                value?.toString()
-                              )}
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                    <td className="px-4 py-2">
-                      {editingRow?.id === row.id ? (
-                        <>
-                          <button onClick={handleUpdate} className="text-green-400 hover:text-green-300 mr-2" disabled={uploading}><Save size={16} /></button>
-                          <button onClick={() => setEditingRow(null)} className="text-red-400 hover:text-red-300"><X size={16} /></button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => setEditingRow(row)} className="text-gold hover:text-gold/80 mr-2"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(row.id)} className="text-red-400 hover:text-red-300 mr-2"><Trash2 size={16} /></button>
-                          {activeTable === 'reviews' && (
-                            <button onClick={() => toggleBoolean(row, 'approved')} className="text-blue-400 hover:text-blue-300" title="Toggle approved">
-                              {row.approved ? <Eye size={16} /> : <EyeOff size={16} />}
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {dbSubTab === 'news' && (
+              <div className="space-y-4">
+                <input className={inputClass} placeholder="Title" value={editNews.title} onChange={e => setEditNews({ ...editNews, title: e.target.value })} />
+                <textarea className={inputClass + ' resize-none'} rows={4} placeholder="Content" value={editNews.content} onChange={e => setEditNews({ ...editNews, content: e.target.value })} />
+                <Button variant="hero" size="sm" onClick={saveNews}>
+                  {editingId ? <><Save size={14} /> Update News</> : <><Plus size={14} /> Add News</>}
+                </Button>
+                <div className="space-y-2 mt-4">
+                  {news.length === 0 ? <p className="text-muted-foreground text-center py-4">No news posts yet.</p> : news.map(n => (
+                    <div key={n.id} className="flex items-center justify-between bg-muted p-3 rounded text-sm">
+                      <span className="font-medium">{n.title}</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditNews(n); setEditingId(n.id!); }} className="text-accent hover:text-foreground"><Edit2 size={14} /></button>
+                        <button onClick={() => deleteNews(n.id!)} className="text-destructive hover:text-foreground"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {dbSubTab === 'upcoming' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input className={inputClass} placeholder="Title" value={editUpcoming.title} onChange={e => setEditUpcoming({ ...editUpcoming, title: e.target.value })} />
+                  <input className={inputClass} placeholder="Estimated Date" type="date" value={editUpcoming.estimated_date} onChange={e => setEditUpcoming({ ...editUpcoming, estimated_date: e.target.value })} />
+                  <div className="col-span-2 flex gap-2 items-center">
+                    <input className={inputClass} placeholder="Cover image path" value={editUpcoming.cover_image} onChange={e => setEditUpcoming({ ...editUpcoming, cover_image: e.target.value })} />
+                    <ImagePicker value={editUpcoming.cover_image} onChange={(url) => setEditUpcoming({ ...editUpcoming, cover_image: url })} />
+                  </div>
+                </div>
+                <textarea className={inputClass + ' resize-none'} rows={3} placeholder="Description" value={editUpcoming.description} onChange={e => setEditUpcoming({ ...editUpcoming, description: e.target.value })} />
+                <Button variant="hero" size="sm" onClick={saveUpcoming}>
+                  {editingId ? <><Save size={14} /> Update</> : <><Plus size={14} /> Add Upcoming</>}
+                </Button>
+                <div className="space-y-2 mt-4">
+                  {upcoming.length === 0 ? <p className="text-muted-foreground text-center py-4">No upcoming books yet.</p> : upcoming.map(u => (
+                    <div key={u.id} className="flex items-center justify-between bg-muted p-3 rounded text-sm">
+                      <div className="flex items-center gap-2">
+                        {u.cover_image && <img src={u.cover_image} alt="" className="h-8 w-8 object-cover rounded" />}
+                        <span className="font-medium">{u.title}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditUpcoming(u); setEditingId(u.id!); }} className="text-accent hover:text-foreground"><Edit2 size={14} /></button>
+                        <button onClick={() => deleteUpcoming(u.id!)} className="text-destructive hover:text-foreground"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Add new row button */}
-        <div className="mt-6">
-          <Button variant="hero" size="sm" onClick={() => setNewRow({})} className="bg-gold text-black hover:bg-gold/90">
-            <Plus size={16} className="mr-2" />
-            Add New Record
-          </Button>
-        </div>
-      </div>
-
-      {/* Logout Popup */}
-      {logoutPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-700 animate-scale-in">
-            <h3 className="text-xl font-display text-white mb-3">Confirm Logout</h3>
-            <p className="text-gray-300 mb-6">Are you sure you want to end your session?</p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="ghost" onClick={() => setLogoutPopup(false)} className="text-gray-300 hover:text-white">Cancel</Button>
-              <Button variant="destructive" onClick={confirmLogout} className="bg-red-600 hover:bg-red-700">Logout</Button>
+        {/* CONTENT TAB */}
+        {activeTab === 'content' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-display text-lg mb-3 flex items-center gap-2"><Eye size={18} /> Pending Reviews</h3>
+              {reviews.filter(r => !r.approved).length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No pending reviews.</p>
+              ) : (
+                reviews.filter(r => !r.approved).map(r => (
+                  <div key={r.id} className="bg-muted p-3 rounded mb-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-semibold">{r.reviewer_name} (⭐ {r.rating}/5)</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => approveReview(r.id!, true)} className="text-green-500 hover:text-green-400"><CheckCircle size={16} /></button>
+                        <button onClick={() => approveReview(r.id!, false)} className="text-red-500 hover:text-red-400"><X size={16} /></button>
+                      </div>
+                    </div>
+                    <p className="mt-1">{r.review_text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            <div>
+              <h3 className="font-display text-lg mb-3">Live Pages Content</h3>
+              <p className="text-sm text-muted-foreground mb-2">Quick links to edit content that appears on the frontend:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('books'); }}><BookOpen size={14} className="mr-2" /> Edit Books</Button>
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('news'); }}><Newspaper size={14} className="mr-2" /> Edit News</Button>
+                <Button variant="outline" size="sm" onClick={() => { setActiveTab('hbdb'); setDbSubTab('upcoming'); }}><Clock size={14} className="mr-2" /> Edit Upcoming</Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Toast */}
-      {toast.type && (
-        <div className="fixed bottom-4 right-4 z-50 animate-fade-in-up">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white`}>
-            {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-            {toast.message}
+        {/* LOGS TAB */}
+        {activeTab === 'logs' && (
+          <div>
+            <div className="flex gap-2 mb-4">
+              <button className={subTabClass('activity', logsSubTab)} onClick={() => setLogsSubTab('activity')}>Activity Logs</button>
+              <button className={subTabClass('errors', logsSubTab)} onClick={() => setLogsSubTab('errors')}>System Errors</button>
+            </div>
+            {logsSubTab === 'activity' && (
+              <div className="overflow-auto max-h-96">
+                {logs.length === 0 ? <p className="text-muted-foreground text-center py-4">No activity logged yet.</p> : (
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-muted-foreground border-b border-border">
+                      <tr><th>Time</th><th>User</th><th>Action</th><th>Table</th><th>Details</th></tr>
+                    </thead>
+                    <tbody>
+                      {logs.map(l => (
+                        <tr key={l.id} className="border-b border-border/50">
+                          <td className="py-2">{new Date(l.created_at).toLocaleString()}</td>
+                          <td>{l.admin_user}</td>
+                          <td>{l.action}</td>
+                          <td>{l.table_name}</td>
+                          <td className="max-w-xs truncate">{JSON.stringify(l.details)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+            {logsSubTab === 'errors' && (
+              <div className="overflow-auto max-h-96">
+                {errors.length === 0 ? <p className="text-muted-foreground text-center py-4">No errors recorded.</p> : (
+                  errors.map(e => (
+                    <div key={e.id} className="bg-red-900/20 border border-red-500/30 p-3 rounded mb-2 text-sm">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>{new Date(e.created_at).toLocaleString()}</span>
+                        <span>{e.url}</span>
+                      </div>
+                      <p className="font-mono text-red-400">{e.error_message}</p>
+                      {e.error_stack && <details className="mt-2"><summary className="cursor-pointer">Stack trace</summary><pre className="text-xs text-red-300 overflow-auto max-h-40">{e.error_stack}</pre></details>}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes blob { 0% { transform: translate(0px,0px) scale(1); } 33% { transform: translate(30px,-50px) scale(1.1); } 66% { transform: translate(-20px,20px) scale(0.9); } 100% { transform: translate(0px,0px) scale(1); } }
-        .animate-blob { animation: blob 7s infinite; }
-        .animation-delay-2000 { animation-delay: 2s; }
-        .animation-delay-4000 { animation-delay: 4s; }
-        @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-scale-in { animation: scale-in 0.2s ease-out; }
-        @keyframes fade-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fade-in-up 0.2s ease-out; }
-      `}</style>
+        )}
+      </div>
     </div>
   );
 };
