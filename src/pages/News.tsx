@@ -22,40 +22,79 @@ const News = () => {
   const [news, setNews] = useState<NewsPost[]>(fallbackNews);
   const [likes, setLikes] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    supabase
+  // Fetch initial data
+  const fetchNews = async () => {
+    const { data, error } = await supabase
       .from('news_posts')
       .select('id, title, content, date')
       .eq('published', true)
-      .order('date', { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) setNews(data);
-      });
+      .order('date', { ascending: false });
+    if (!error && data && data.length > 0) setNews(data);
+  };
 
-    supabase
+  const fetchLikes = async () => {
+    const { data, error } = await supabase
       .from('news_likes')
-      .select('news_title, like_count')
-      .then(({ data }) => {
-        if (data) {
-          const map: Record<string, number> = {};
-          data.forEach(r => { map[r.news_title] = r.like_count; });
-          setLikes(map);
+      .select('news_title, like_count');
+    if (!error && data) {
+      const map: Record<string, number> = {};
+      data.forEach(r => { map[r.news_title] = r.like_count; });
+      setLikes(map);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+    fetchLikes();
+
+    // Subscribe to news_posts table changes (INSERT, UPDATE, DELETE)
+    const newsSubscription = supabase
+      .channel('public:news_posts')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'news_posts' },
+        () => {
+          console.log('News changed – refreshing...');
+          fetchNews();
         }
-      });
+      )
+      .subscribe();
+
+    // Subscribe to news_likes table changes
+    const likesSubscription = supabase
+      .channel('public:news_likes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'news_likes' },
+        () => {
+          console.log('Likes changed – refreshing...');
+          fetchLikes();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(newsSubscription);
+      supabase.removeChannel(likesSubscription);
+    };
   }, []);
 
-const handleLike = async (title: string) => {
-  setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) + 1 }));
+  const handleLike = async (title: string) => {
+    // Optimistic update
+    setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) + 1 }));
 
-  const { data, error } = await supabase.rpc('increment_like', { p_news_title: title });
+    const { data, error } = await supabase.rpc('increment_like', { p_news_title: title });
 
-  if (error) {
-    console.error('Like error:', error);
-    setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) - 1 }));
-  } else if (typeof data === 'number') {
-    setLikes(prev => ({ ...prev, [title]: data }));
-  }
-};
+    if (error) {
+      console.error('Like error:', error);
+      // Revert optimistic update
+      setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) - 1 }));
+    } else if (typeof data === 'number') {
+      // If the RPC returns the new count, we could update directly, but the subscription will also refresh
+      setLikes(prev => ({ ...prev, [title]: data }));
+    }
+  };
+
   return (
     <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4">
       <div className="container mx-auto max-w-3xl">
