@@ -3,34 +3,34 @@ import { Workbox } from "workbox-window";
 
 const AutoReload = () => {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) {
-      console.log("Service Worker not supported");
-      return;
-    }
+    if (!("serviceWorker" in navigator)) return;
 
     const wb = new Workbox("/sw.js");
+    let reloadTimeout: ReturnType<typeof setTimeout>;
 
-    wb.addEventListener("installed", (event) => {
-      console.log("Service Worker installed event", event);
-    });
-
-    wb.addEventListener("waiting", (event) => {
+    wb.addEventListener("waiting", () => {
       console.log("New version waiting – reloading...");
-      // Reload the page to activate the new service worker
       window.location.reload();
     });
 
-    wb.addEventListener("controlling", (event) => {
-      console.log("Service Worker now controlling the page");
+    wb.register().then((reg) => {
+      console.log("Service Worker registered", reg);
+
+      // Fallback: check every 30 seconds if a new version is waiting
+      const checkForUpdate = () => {
+        if (reg.waiting) {
+          console.log("Fallback: waiting worker found, reloading");
+          window.location.reload();
+        } else {
+          reg.update();
+        }
+      };
+      reloadTimeout = setInterval(checkForUpdate, 30000);
     });
 
-    wb.register()
-      .then((registration) => {
-        console.log("Service Worker registered", registration);
-      })
-      .catch((err) => {
-        console.error("Service Worker registration failed", err);
-      });
+    return () => {
+      clearInterval(reloadTimeout);
+    };
   }, []);
 
   return null;
