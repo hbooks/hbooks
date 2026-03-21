@@ -7,29 +7,65 @@ const AutoReload = () => {
 
     const wb = new Workbox("/sw.js");
     let reloadTimeout: ReturnType<typeof setTimeout>;
+    let updateCheckCount = 0;
 
+    // Primary: Listen for the waiting event
     wb.addEventListener("waiting", () => {
-      console.log("New version waiting – reloading...");
-      window.location.reload();
+      console.log("✓ New version waiting – calling skipWaiting and reloading...");
+      // Tell the new SW to skip waiting and take control
+      wb.messageSW({ type: "SKIP_WAITING" });
+      // Reload after a brief delay to ensure the new SW takes control
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     });
 
-    wb.register().then((reg) => {
-      console.log("Service Worker registered", reg);
-
-      // Fallback: check every 30 seconds if a new version is waiting
-      const checkForUpdate = () => {
-        if (reg.waiting) {
-          console.log("Fallback: waiting worker found, reloading");
-          window.location.reload();
-        } else {
-          reg.update();
+    // Fallback: Check for updates every 10 seconds (more aggressive than 30s)
+    const checkForUpdate = async () => {
+      updateCheckCount++;
+      try {
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+        if (!reg) {
+          console.log("⚠ No service worker registration found");
+          return;
         }
-      };
-      reloadTimeout = setInterval(checkForUpdate, 30000);
-    });
+
+        // Explicitly check for updates
+        await reg.update();
+
+        if (reg.waiting) {
+          console.log(
+            `✓ Fallback (check #${updateCheckCount}): waiting worker detected, reloading...`
+          );
+          // Tell the waiting worker to skip waiting
+          reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+        } else if (reg.active) {
+          console.log(
+            `Fallback (check #${updateCheckCount}): active worker is up-to-date`
+          );
+        }
+      } catch (error) {
+        console.error("Error checking for SW updates:", error);
+      }
+    };
+
+    wb.register()
+      .then((reg) => {
+        console.log("✓ Service Worker registered:", reg);
+        // Start aggressive fallback checking
+        reloadTimeout = setInterval(checkForUpdate, 10000); // Check every 10 seconds
+      })
+      .catch((error) => {
+        console.error("Service Worker registration failed:", error);
+      });
 
     return () => {
-      clearInterval(reloadTimeout);
+      if (reloadTimeout) {
+        clearInterval(reloadTimeout);
+      }
     };
   }, []);
 
