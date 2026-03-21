@@ -163,7 +163,7 @@ const Contact = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-black mb-1">Message/Issue</label>
+                <label className="block text-sm font-semibold text-black mb-1">Message</label>
                 <textarea
                   value={message}
                   onChange={e => setMessage(e.target.value)}
