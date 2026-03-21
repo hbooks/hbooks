@@ -6,49 +6,56 @@ import gildedCageCover from '@/assets/gilded-cage-cover.png';
 import trappedCover from '@/assets/trapped-cover.png';
 
 interface Book {
-  id: number;
+  id: string;
   title: string;
-  cover_image: string;      // stored path or URL
-  cover_image_url?: string; // signed URL (if from bucket)
+  cover_image: string;
+  cover_image_url?: string;
   description: string;
-  ubl?: string;             // changed from ubl_link
+  ubl?: string;
   series?: string;
+  published: boolean;
+  created_at: string;
 }
 
 interface UpcomingBook {
-  id: number;
+  id: string;
   title: string;
-  cover_image: string;      // stored path or URL
-  cover_image_url?: string; // signed URL (if from bucket)
+  cover_image: string;
+  cover_image_url?: string;
   description: string;
   estimated_date: string;
+  created_at: string;
 }
 
 const fallbackBooks: Book[] = [
   {
-    id: 1,
+    id: '1',
     title: 'The Gilded Cage',
     cover_image: gildedCageCover,
     description: 'Remy Sot has spent four years at university chasing two dreams: making his parents proud, and winning the girl he loves. But when graduation brings rejection instead of romance, he\'s forced to confront a lifetime of emotional miscalculation.',
     ubl: 'https://books2read.com/u/mgQwZK',
     series: 'Lovely Strangers, Book 1',
+    published: true,
+    created_at: '',
   },
 ];
 
 const fallbackUpcoming: UpcomingBook[] = [
   {
-    id: 1,
+    id: '1',
     title: 'Lovely Strangers, Volume 2',
     cover_image: gildedCageCover,
     description: 'The story continues. Deeper connections, darker secrets, and the consequences of choices made in the heat of youth. Volume 2 picks up where The Gilded Cage left off.',
     estimated_date: '2–4 weeks',
+    created_at: '',
   },
   {
-    id: 2,
+    id: '2',
     title: 'TRAPPED (Working Title)',
     cover_image: trappedCover,
     description: 'Something new is taking shape. Darker? Maybe. More intense? Definitely. The bones are there, and the excitement about where this one is headed is undeniable.',
     estimated_date: 'Sketching Ideas',
+    created_at: '',
   },
 ];
 
@@ -56,67 +63,81 @@ const Library = () => {
   const [books, setBooks] = useState<Book[]>(fallbackBooks);
   const [upcoming, setUpcoming] = useState<UpcomingBook[]>(fallbackUpcoming);
 
-  useEffect(() => {
-    const fetchBooks = async () => {
-      const { data, error } = await supabase
-        .from('books')
-        .select('*')
-        .eq('published', true)
-        .order('created_at', { ascending: false });
+  const fetchData = async () => {
+    // Fetch published books
+    const { data: booksData, error: booksError } = await supabase
+      .from('books')
+      .select('*')
+      .eq('published', true)
+      .order('created_at', { ascending: false });
 
-      if (error || !data) return;
-
-      // Generate signed URLs for covers stored in private bucket
+    if (!booksError && booksData && booksData.length > 0) {
       const booksWithUrls = await Promise.all(
-        data.map(async (book: Book) => {
-          // If cover_image looks like a storage path (no http:// or data:), get signed URL
-          const isStoredPath = book.cover_image && 
-            !book.cover_image.startsWith('http') && 
-            !book.cover_image.startsWith('data:') &&
-            !book.cover_image.startsWith('/');
-          if (isStoredPath) {
-            const signedUrl = await getSignedUrl(book.cover_image);
-            return { ...book, cover_image_url: signedUrl };
-          }
-          return { ...book, cover_image_url: book.cover_image };
-        })
+        booksData.map(async (book) => ({
+          ...book,
+          cover_image_url: book.cover_image ? await getSignedUrl(book.cover_image) : '',
+        }))
       );
       setBooks(booksWithUrls);
-    };
+    } else if (booksData && booksData.length === 0) {
+      // Keep fallback if no data (fallback already set)
+    } else {
+      console.error(booksError);
+    }
 
-    const fetchUpcoming = async () => {
-      const { data, error } = await supabase
-        .from('upcoming_books')
-        .select('*')
-        .order('created_at', { ascending: false });
+    // Fetch upcoming books
+    const { data: upcomingData, error: upcomingError } = await supabase
+      .from('upcoming_books')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error || !data) return;
-
+    if (!upcomingError && upcomingData && upcomingData.length > 0) {
       const upcomingWithUrls = await Promise.all(
-        data.map(async (book: UpcomingBook) => {
-          const isStoredPath = book.cover_image && 
-            !book.cover_image.startsWith('http') && 
-            !book.cover_image.startsWith('data:') &&
-            !book.cover_image.startsWith('/');
-          if (isStoredPath) {
-            const signedUrl = await getSignedUrl(book.cover_image);
-            return { ...book, cover_image_url: signedUrl };
-          }
-          return { ...book, cover_image_url: book.cover_image };
-        })
+        upcomingData.map(async (book) => ({
+          ...book,
+          cover_image_url: book.cover_image ? await getSignedUrl(book.cover_image) : '',
+        }))
       );
       setUpcoming(upcomingWithUrls);
-    };
+    } else if (upcomingData && upcomingData.length === 0) {
+      // keep fallback
+    } else {
+      console.error(upcomingError);
+    }
+  };
 
-    fetchBooks();
-    fetchUpcoming();
+  useEffect(() => {
+    fetchData();
+
+    // Subscribe to changes on both tables
+    const subscription = supabase
+      .channel('public:library')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'books' },
+        () => {
+          console.log('Books changed – refreshing library...');
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'upcoming_books' },
+        () => {
+          console.log('Upcoming books changed – refreshing library...');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
-  // Helper to get image src: prefer cover_image_url if available, otherwise cover_image
-  const getCoverSrc = (book: Book | UpcomingBook) => {
-    const url = 'cover_image_url' in book ? book.cover_image_url : (book as any).cover_image;
-    if (url && url.startsWith('http')) return url;
-    return (book as any).cover_image;
+  const getCoverSrc = (item: Book | UpcomingBook) => {
+    if ('cover_image_url' in item && item.cover_image_url) return item.cover_image_url;
+    return (item as any).cover_image;
   };
 
   return (
