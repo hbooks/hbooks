@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSignedUrl } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Moon, Star } from 'lucide-react'; // added Moon and Star icons
+import { Moon } from 'lucide-react';
 import bookCover from '@/assets/gilded-cage-cover.png';
 
 interface NewsPost {
@@ -39,22 +39,44 @@ const Particles = () => (
 const Index = () => {
   const [latestNews, setLatestNews] = useState<NewsPost>(fallbackNews);
 
-  useEffect(() => {
-    supabase
+  const fetchLatestNews = async () => {
+    const { data, error } = await supabase
       .from('news_posts')
       .select('title, date, content')
       .eq('published', true)
       .order('date', { ascending: false })
       .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) setLatestNews(data);
-      });
+      .single();
+
+    if (error) {
+      console.error('Error fetching news:', error);
+    } else if (data) {
+      setLatestNews(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchLatestNews();
+
+    const subscription = supabase
+      .channel('public:news_posts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'news_posts' },
+        () => {
+          console.log('New news post added – updating...');
+          fetchLatestNews();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   return (
     <>
-      {/* Hero section (unchanged) */}
       <section className="hero-gradient min-h-[85vh] flex items-center justify-center px-4">
         <Particles />
         <div className="container mx-auto flex flex-col md:flex-row items-center gap-12 relative z-10">
@@ -85,7 +107,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Holiday message section – add new messages here */}
+      {/* Holiday message 
       <section className="py-8 px-4">
         <div className="container mx-auto max-w-3xl">
           <div className="bg-card border-l-4 border-accent p-6 rounded-lg shadow-md">
@@ -101,8 +123,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+      --End of message--*/}
 
-      {/* Latest News section (unchanged) */}
+      {/* Latest News */}
       <section className="py-16 px-4">
         <div className="container mx-auto text-center">
           <h2 className="font-display text-3xl md:text-4xl mb-8">Latest from the Desk</h2>
