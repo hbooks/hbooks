@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { FaXTwitter, FaInstagram, FaFacebookF, FaDiscord } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
@@ -12,13 +12,21 @@ const socialLinks = [
 ];
 
 const Contact = () => {
-  const [showForm, setShowForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setMessage('');
+    setSuccess(false);
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,10 +62,18 @@ const Contact = () => {
 
     setSubmitting(false);
     setSuccess(true);
-    setName('');
-    setEmail('');
-    setMessage('');
-    setTimeout(() => setSuccess(false), 5000);
+    resetForm();
+
+    // Close modal after 2 seconds
+    setTimeout(() => {
+      setIsModalOpen(false);
+      setSuccess(false);
+    }, 2000);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    resetForm();
   };
 
   return (
@@ -90,64 +106,89 @@ const Contact = () => {
           </div>
         </div>
 
-        {/* Button that reveals the form */}
-        {!showForm ? (
-          <div className="text-center">
-            <Button
-              variant="hero"
-              size="lg"
-              onClick={() => setShowForm(true)}
-              className="px-10 py-6 text-lg"
-            >
-              <Send size={20} className="mr-2" />
-              Message me
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="bg-card text-card-foreground p-8 rounded-lg shadow-md space-y-4">
-            <h2 className="font-display text-xl mb-4 text-center">Send a Message</h2>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Your Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-                maxLength={100}
-                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Your Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                maxLength={255}
-                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Message</label>
-              <textarea
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                required
-                maxLength={1000}
-                rows={5}
-                className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none"
-              />
-            </div>
-            <Button type="submit" disabled={submitting} variant="hero" className="w-full">
-              <Send size={16} className="mr-2" />
-              {submitting ? 'Sending...' : 'Send Message'}
-            </Button>
-            {success && <p className="text-center text-sm text-accent font-medium">Message sent! Thank you for reaching out.</p>}
-            {error && <p className="text-center text-sm text-destructive font-medium">{error}</p>}
-          </form>
-        )}
+        {/* Button that opens the modal */}
+        <div className="text-center">
+          <Button
+            variant="hero"
+            size="lg"
+            onClick={() => setIsModalOpen(true)}
+            className="px-10 py-6 text-lg"
+          >
+            <Send size={20} className="mr-2" />
+            Message me
+          </Button>
+        </div>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-card max-w-md w-full rounded-2xl shadow-2xl border border-accent/20 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-accent transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <form onSubmit={handleSubmit} className="p-8 space-y-4">
+              <h2 className="font-display text-xl text-center text-foreground">Send a Message</h2>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Your Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                  maxLength={100}
+                  className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Your Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  maxLength={255}
+                  className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Message</label>
+                <textarea
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  required
+                  maxLength={1000}
+                  rows={5}
+                  className="w-full px-4 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                />
+              </div>
+              <Button type="submit" disabled={submitting} variant="hero" className="w-full">
+                <Send size={16} className="mr-2" />
+                {submitting ? 'Sending...' : 'Send Message'}
+              </Button>
+              {success && (
+                <p className="text-center text-sm text-accent font-medium">
+                  Message sent! Thank you for reaching out.
+                </p>
+              )}
+              {error && (
+                <p className="text-center text-sm text-destructive font-medium">{error}</p>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
