@@ -15,6 +15,7 @@ import Contact from "./pages/Contact";
 import Support from "./pages/Support";
 import ThankYou from "./pages/ThankYou";
 import Library from "./pages/Library";
+import AutoReload from "./components/AutoReload";
 import NonDiscordForm from "./pages/NonDiscordForm";
 import AdminPage from './pages/AdminPage';
 import FAQ from "./pages/FAQ";
@@ -60,6 +61,7 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
+        <AutoReload />
       </BrowserRouter>
     </TooltipProvider>
   );
