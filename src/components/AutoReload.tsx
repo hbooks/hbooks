@@ -1,67 +1,37 @@
-import { useEffect, useRef, useState } from "react";
-import { useRegisterSW } from "virtual:pwa-register/react";
+import { useEffect } from "react";
+import { Workbox } from "workbox-window";
 
 const AutoReload = () => {
-  const { needRefresh, updateServiceWorker } = useRegisterSW();
-  const reloaded = useRef(false);
-  const [isUserActive, setIsUserActive] = useState(true);
-  const [isPageVisible, setIsPageVisible] = useState(true);
-  const pendingReload = useRef<NodeJS.Timeout | null>(null);
-
-  // Detect form interaction (input/textarea/select focus)
   useEffect(() => {
-    const handleFocus = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
-        setIsUserActive(false);
-      }
-    };
-    const handleBlur = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
-        setTimeout(() => {
-          const active = document.activeElement;
-          if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA' && active.tagName !== 'SELECT')) {
-            setIsUserActive(true);
-          }
-        }, 100);
-      }
-    };
-
-    document.addEventListener('focusin', handleFocus);
-    document.addEventListener('focusout', handleBlur);
-
-    return () => {
-      document.removeEventListener('focusin', handleFocus);
-      document.removeEventListener('focusout', handleBlur);
-    };
-  }, []);
-
-  // Detect page visibility
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsPageVisible(!document.hidden);
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-
-  // Reload when conditions are met
-  useEffect(() => {
-    if (needRefresh && !reloaded.current && isUserActive && isPageVisible) {
-      reloaded.current = true;
-
-      if (pendingReload.current) clearTimeout(pendingReload.current);
-
-      pendingReload.current = setTimeout(() => {
-        if (needRefresh && !reloaded.current && isUserActive && isPageVisible) {
-          updateServiceWorker(true);
-        } else {
-          reloaded.current = false;
-        }
-      }, 3000);
+    if (!("serviceWorker" in navigator)) {
+      console.log("Service Worker not supported");
+      return;
     }
-  }, [needRefresh, isUserActive, isPageVisible, updateServiceWorker]);
+
+    const wb = new Workbox("/sw.js");
+
+    wb.addEventListener("installed", (event) => {
+      console.log("Service Worker installed event", event);
+    });
+
+    wb.addEventListener("waiting", (event) => {
+      console.log("New version waiting – reloading...");
+      // Reload the page to activate the new service worker
+      window.location.reload();
+    });
+
+    wb.addEventListener("controlling", (event) => {
+      console.log("Service Worker now controlling the page");
+    });
+
+    wb.register()
+      .then((registration) => {
+        console.log("Service Worker registered", registration);
+      })
+      .catch((err) => {
+        console.error("Service Worker registration failed", err);
+      });
+  }, []);
 
   return null;
 };
