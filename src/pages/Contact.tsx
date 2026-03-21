@@ -141,7 +141,7 @@ const Contact = () => {
             <form onSubmit={handleSubmit} className="p-8 space-y-4">
               <h2 className="font-display text-xl text-center text-foreground">Send a Message</h2>
               <div>                
-                <label className="block text-sm font-semibold text-cream mb-1">Your Name</label>
+                <label className="block text-sm font-semibold text-black mb-1">Your Name</label>
                 <input
                   type="text"
                   value={name}
@@ -152,7 +152,7 @@ const Contact = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-cream mb-1">Your Email</label>
+                <label className="block text-sm font-semibold text-black mb-1">Your Email</label>
                 <input
                   type="email"
                   value={email}
@@ -163,7 +163,7 @@ const Contact = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-cream mb-1">Message</label>
+                <label className="block text-sm font-semibold text-black mb-1">Message</label>
                 <textarea
                   value={message}
                   onChange={e => setMessage(e.target.value)}
