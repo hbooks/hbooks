@@ -54,7 +54,7 @@ const Stores = () => {
           <div className="w-20 h-20 rounded-full bg-accent mx-auto mb-6 flex items-center justify-center">
             <BookOpen size={36} className="text-accent-foreground" />
           </div>
-          <h1 className="font-display text-4xl md:text-5xl text-cream mb-4">Get My Library Books</h1>
+          <h1 className="font-display text-4xl md:text-5xl text-cream mb-4">Get My Published Books</h1>
           <p className="text-muted-foreground text-lg">Find my books on your favourite online stores</p>
         </div>
 
@@ -64,7 +64,7 @@ const Stores = () => {
               key={book.id}
               className="bg-card border border-border rounded-lg p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:shadow-lg"
             >
-              <h2 className="font-display text-xl text-cream">{book.title}</h2>
+              <h2 className="font-display text-xl text-yellow-500">{book.title}</h2>
               <Button
                 variant="heroOutline"
                 onClick={() => handleBuyClick(book)}
