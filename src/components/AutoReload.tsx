@@ -34,20 +34,21 @@ const AutoReload = () => {
         await reg.update();
 
         if (reg.waiting) {
-         /* console.log(
+          console.log(
             `✓ Fallback (check #${updateCheckCount}): waiting worker detected, reloading...`
-          ); Activate if its for debugging only
-          */
-          
+          );           
           // Tell the waiting worker to skip waiting
           reg.waiting.postMessage({ type: "SKIP_WAITING" });
           setTimeout(() => {
             window.location.reload();
           }, 100);
         } else if (reg.active) {
+          /*  Activate if its for debugging purpose only otherwise silent – no log
+          
           console.log(
             `Fallback (check #${updateCheckCount}): active worker is up-to-date`
-          );
+          );      
+          */
         }
       } catch (error) {
         console.error("Error checking for SW updates:", error);
