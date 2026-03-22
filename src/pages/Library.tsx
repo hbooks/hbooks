@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom'; 
 import { User, BookOpen, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, getSignedUrl } from '@/lib/supabase';
@@ -205,11 +206,12 @@ const Library = () => {
           </div>
         </section>
 
-        <div className="text-center mt-8">
-  <Button variant="heroOutline" asChild>
-    <Link to="/stores">Where can I get the books?</Link>
-  </Button>
-</div>
+        {/* Button to find stores – placed above Discord CTA */}
+        <div className="text-center mb-8">
+          <Button variant="heroOutline" asChild className="px-8 py-3 text-lg">
+            <Link to="/stores">Where can I get the books?</Link>
+          </Button>
+        </div>
 
         {/* Discord CTA */}
         <div className="text-center bg-card p-8 rounded-lg shadow-md border border-border">
