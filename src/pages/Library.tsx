@@ -205,6 +205,12 @@ const Library = () => {
           </div>
         </section>
 
+        <div className="text-center mt-8">
+  <Button variant="heroOutline" asChild>
+    <Link to="/stores">Where can I get the books?</Link>
+  </Button>
+</div>
+
         {/* Discord CTA */}
         <div className="text-center bg-card p-8 rounded-lg shadow-md border border-border">
           <h3 className="font-display text-2xl mb-3">Want Early Leaks?</h3>
