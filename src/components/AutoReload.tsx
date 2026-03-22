@@ -34,9 +34,11 @@ const AutoReload = () => {
         await reg.update();
 
         if (reg.waiting) {
-          console.log(
+         /* console.log(
             `✓ Fallback (check #${updateCheckCount}): waiting worker detected, reloading...`
-          );
+          ); Activate if its for debugging only
+          */
+          
           // Tell the waiting worker to skip waiting
           reg.waiting.postMessage({ type: "SKIP_WAITING" });
           setTimeout(() => {
