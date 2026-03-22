@@ -459,7 +459,7 @@ const AdminPage = () => {
             title: bookFormData.title,
             cover_image: bookFormData.cover_image,
             description: bookFormData.description,
-            ubl_link: bookFormData.ubl_link,
+            ubl: bookFormData.ubl,
             published: bookFormData.published,
           })
           .eq('id', editingBook.id);
@@ -479,7 +479,7 @@ const AdminPage = () => {
             title: bookFormData.title,
             cover_image: bookFormData.cover_image,
             description: bookFormData.description,
-            ubl_link: bookFormData.ubl_link,
+            ubl: bookFormData.ubl,
             published: bookFormData.published,
           })
           .select();  // <- get the new id
