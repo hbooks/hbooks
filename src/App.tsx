@@ -18,6 +18,7 @@ import Library from "./pages/Library";
 import AutoReload from "./components/AutoReload";
 import NonDiscordForm from "./pages/NonDiscordForm";
 import AdminPage from './pages/AdminPage';
+import Stores from './pages/Stores';
 import FAQ from "./pages/FAQ";
 import Helpline from "./pages/Helpline";
 import NotFound from "./pages/NotFound";
@@ -53,6 +54,7 @@ const App = () => {
             <Route path="/library" element={<Library />} />
             <Route path="/nonDiscordForm" element={<NonDiscordForm />} />
             <Route path="/ir806x40" element={<AdminPage />} />
+            <Route path="/stores" element={<Stores />} />
             <Route path="/thankyoupage" element={<ThankYou />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
