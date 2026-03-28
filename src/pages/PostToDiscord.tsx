@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LogOut } from 'lucide-react';
+import { Session } from '@supabase/supabase-js';
 
 const PostToDiscord = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [channel, setChannel] = useState('behind');
@@ -20,20 +25,39 @@ const PostToDiscord = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  if (!user || user.email !== 'admin@hpbooks.uk') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary">
-        <Card className="max-w-md w-full p-6">
-          <CardHeader><CardTitle>Access Denied</CardTitle></CardHeader>
-          <CardContent><p>You do not have permission to view this page.</p></CardContent>
-        </Card>
-      </div>
-    );
-  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoadingAuth(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoginError(error.message);
+    } else {
+      setEmail('');
+      setPassword('');
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   const uploadFile = async (file: File, folder: string) => {
     const fileName = `${Date.now()}-${file.name}`;
@@ -73,7 +97,7 @@ const PostToDiscord = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     setSuccess(false);
 
@@ -86,7 +110,6 @@ const PostToDiscord = () => {
       const scheduled = scheduledDate ? new Date(scheduledDate).toISOString() : null;
 
       if (scheduled) {
-        // Schedule post
         const { error: insertError } = await supabase.from('discord_posts').insert({
           title,
           content,
@@ -99,7 +122,6 @@ const PostToDiscord = () => {
         setSuccess(true);
         resetForm();
       } else {
-        // Post immediately
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-to-discord`,
           {
@@ -117,7 +139,6 @@ const PostToDiscord = () => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Failed to post');
 
-        // Log post
         await supabase.from('discord_posts').insert({
           title,
           content,
@@ -133,13 +154,73 @@ const PostToDiscord = () => {
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
+        <Loader2 className="animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  // Not logged in – show login form
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
+        <div className="bg-card max-w-md w-full p-8 rounded-lg shadow-xl">
+          <h2 className="font-display text-2xl text-center mb-6">Admin Access</h2>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-2 rounded border border-border bg-background text-foreground"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-2 rounded border border-border bg-background text-foreground"
+            />
+            <Button type="submit" variant="hero" className="w-full">Login</Button>
+            {loginError && <p className="text-destructive text-sm text-center">{loginError}</p>}
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Logged in but not admin email
+  if (session.user.email !== 'admin@hpbooks.uk') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader><CardTitle>Access Denied</CardTitle></CardHeader>
+          <CardContent>
+            <p>You do not have permission to view this page.</p>
+            <Button variant="hero" onClick={handleLogout} className="mt-4">Logout</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Admin logged in – show posting form
   return (
     <div className="min-h-screen bg-secondary py-12 px-4">
       <div className="container max-w-2xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <Button variant="ghost" onClick={handleLogout} className="text-muted-foreground">
+            <LogOut size={16} className="mr-2" /> Logout
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-display">Post to Discord</CardTitle>
@@ -213,8 +294,8 @@ const PostToDiscord = () => {
                 />
                 <p className="text-xs text-muted-foreground mt-1">Leave empty to post immediately.</p>
               </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? <Loader2 className="animate-spin mr-2" /> : null}
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? <Loader2 className="animate-spin mr-2" /> : null}
                 {scheduledDate ? 'Schedule Post' : 'Post to Discord'}
               </Button>
               {success && <p className="text-green-600 text-center">Posted successfully!</p>}
