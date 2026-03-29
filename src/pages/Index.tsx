@@ -9,6 +9,24 @@ import { Heart } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Optional Lenis smooth scroll (if installed)
+let Lenis: any;
+if (typeof window !== 'undefined') {
+  import('lenis').then((module) => {
+    Lenis = module.default;
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+    function raf(time: number) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+  });
+}
+
 interface NewsPost {
   id: number;
   title: string;
@@ -19,6 +37,7 @@ interface NewsPost {
 const Index = () => {
   const [latestNews, setLatestNews] = useState<NewsPost | null>(null);
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const heroBookRef = useRef<HTMLDivElement>(null);
 
   // Fetch latest news from Supabase
   useEffect(() => {
@@ -34,7 +53,6 @@ const Index = () => {
     };
     fetchNews();
 
-    // Real-time subscription (optional)
     const subscription = supabase
       .channel('public:news_posts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'news_posts' }, fetchNews)
@@ -45,9 +63,9 @@ const Index = () => {
     };
   }, []);
 
-  // Parallax scroll effect: scale background images on scroll
+  // Parallax scroll effect: scale background images on scroll, with will-change for performance
   useEffect(() => {
-    sectionsRef.current.forEach((section, i) => {
+    sectionsRef.current.forEach((section) => {
       if (!section) return;
       const bg = section.querySelector('.section-bg') as HTMLElement;
       if (!bg) return;
@@ -56,13 +74,24 @@ const Index = () => {
         trigger: section,
         start: 'top bottom',
         end: 'bottom top',
-        scrub: true,
+        scrub: 1,
         onUpdate: (self) => {
-          const scale = 1 + self.progress * 0.5; // zoom out up to 1.5x
-          bg.style.transform = `scale(${scale})`;
+          const scale = 1 + self.progress * 0.4; // less extreme zoom (max 1.4)
+          gsap.to(bg, { scale, duration: 0.1, ease: 'none' });
         },
       });
     });
+
+    // Gentle floating animation for the book cover in hero (optional)
+    if (heroBookRef.current) {
+      gsap.to(heroBookRef.current, {
+        y: 20,
+        duration: 3,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power1.inOut',
+      });
+    }
 
     return () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill());
@@ -71,33 +100,42 @@ const Index = () => {
 
   return (
     <div className="bg-black">
-      {/* Section 1: Hero with book cover */}
+      {/* Hero section – book cover as a floating element */}
       <div
         ref={(el) => (sectionsRef.current[0] = el)}
         className="relative h-screen flex items-center justify-center overflow-hidden"
       >
         <div
-          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300"
+          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300 will-change-transform"
           style={{
-            backgroundImage: `url(${bookCover})`,
-            filter: 'brightness(0.4)',
+            backgroundImage: 'url(https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=1887&auto=format)',
+            filter: 'brightness(0.3)',
           }}
         />
-        <div className="relative z-10 text-center px-4 max-w-3xl">
-          <h1 className="font-display text-5xl md:text-7xl text-cream gold-glow mb-4">
-            The Gilded Cage
-          </h1>
-          <p className="text-xl italic text-accent mb-2">Lovely Strangers, Book 1</p>
-          <p className="text-lg text-cream/80 mb-8">Romance with a twist of mystery.</p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <Button variant="hero" size="lg" asChild>
-              <Link to="/books">Learn More</Link>
-            </Button>
-            <Button variant="heroOutline" size="lg" asChild>
-              <a href="https://books2read.com/u/mgQwZK" target="_blank" rel="noopener noreferrer">
-                Buy the Book
-              </a>
-            </Button>
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 px-4 max-w-6xl mx-auto">
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="font-display text-5xl md:text-7xl text-cream gold-glow mb-4">
+              The Gilded Cage
+            </h1>
+            <p className="text-xl italic text-accent mb-2">Lovely Strangers, Book 1</p>
+            <p className="text-lg text-cream/80 mb-8">Romance with a twist of mystery.</p>
+            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+              <Button variant="hero" size="lg" asChild>
+                <Link to="/books">Learn More</Link>
+              </Button>
+              <Button variant="heroOutline" size="lg" asChild>
+                <a href="https://books2read.com/u/mgQwZK" target="_blank" rel="noopener noreferrer">
+                  Buy the Book
+                </a>
+              </Button>
+            </div>
+          </div>
+          <div ref={heroBookRef} className="flex-shrink-0 w-48 md:w-64">
+            <img
+              src={bookCover}
+              alt="The Gilded Cage"
+              className="w-full rounded-2xl shadow-2xl border-2 border-accent/30"
+            />
           </div>
         </div>
       </div>
@@ -108,13 +146,13 @@ const Index = () => {
         className="relative h-screen flex items-center justify-center overflow-hidden"
       >
         <div
-          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300"
+          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300 will-change-transform"
           style={{
             backgroundImage: 'url(https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2070&auto=format)',
-            filter: 'brightness(0.3)',
+            filter: 'brightness(0.35)',
           }}
         />
-        <div className="relative z-10 text-center px-4 max-w-2xl">
+        <div className="relative z-10 text-center px-4 max-w-3xl">
           <h2 className="font-display text-3xl md:text-4xl text-accent mb-6">A Story of Strangers</h2>
           <p className="text-cream/90 text-lg leading-relaxed">
             Remy Sot thought he knew the people closest to him. But when graduation brings rejection instead of romance,
@@ -131,7 +169,7 @@ const Index = () => {
         className="relative h-screen flex items-center justify-center overflow-hidden"
       >
         <div
-          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300"
+          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300 will-change-transform"
           style={{
             backgroundImage: 'url(https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070&auto=format)',
             filter: 'brightness(0.35)',
@@ -167,7 +205,7 @@ const Index = () => {
         className="relative h-screen flex items-center justify-center overflow-hidden"
       >
         <div
-          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300"
+          className="section-bg absolute inset-0 z-0 bg-cover bg-center transition-transform duration-300 will-change-transform"
           style={{
             backgroundImage: 'url(https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2070&auto=format)',
             filter: 'brightness(0.4)',
