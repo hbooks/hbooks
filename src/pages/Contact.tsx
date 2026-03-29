@@ -8,7 +8,7 @@ const socialLinks = [
   { label: 'X', icon: FaXTwitter, href: 'https://x.com/Raphael888870', color: '#000000' },
   { label: 'Instagram', icon: FaInstagram, href: 'https://www.instagram.com/raphael_mmw/', color: '#E4405F' },
   { label: 'Facebook', icon: FaFacebookF, href: 'https://www.facebook.com/profile.php?id=61581325859715', color: '#1877F2' },
-  { label: 'Discord', icon: FaDiscord, href: 'https://discord.gg/zbaugS2B2', color: '#5865F2' },
+  { label: 'Discord', icon: FaDiscord, href: 'https://discord.gg/ChpngtFpux', color: '#5865F2' },
 ];
 
 const Contact = () => {
