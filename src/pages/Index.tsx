@@ -218,7 +218,9 @@ const Index = () => {
             Get exclusive behind-the-scenes content, early looks at Book 2, and a community of readers who love stories that linger.
           </p>
           <Button variant="hero" size="lg" asChild>
-            <Link to="/shop/membership">Become a Member</Link>
+             <a href="https://discord.com/invite/zbaugS2B2" target="_blank" rel="noopener noreferrer">
+                  Become a member
+                </a>
           </Button>
         </div>
       </div>
