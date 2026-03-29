@@ -312,7 +312,3 @@ const PostToDiscord = () => {
 };
 
 export default PostToDiscord;
-  );
-};
-
-export default PostToDiscord;
