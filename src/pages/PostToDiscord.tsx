@@ -41,7 +41,6 @@ const PostToDiscord = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [logsOpen, setLogsOpen] = useState(false);
 
-  // Update clock
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -208,35 +207,31 @@ const PostToDiscord = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700">
-      {/* Header like admin portal */}
-      <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-secondary text-secondary-foreground">
+      {/* Simple header with live indicator */}
+      <header className="bg-card border-b border-border py-4 px-6 sticky top-0 z-20">
+        <div className="container mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img
               src="/assets/favicon/web-app-manifest-192x192.png"
               alt="Logo"
-              className="w-10 h-10 rounded-full border-2 border-gold"
+              className="w-8 h-8 rounded-full border border-accent"
             />
-            <div>
-              <h1 className="font-display text-xl text-white">Discord Post Manager</h1>
-              <p className="text-xs text-gray-400">{session.user.email}</p>
-            </div>
+            <h1 className="font-display text-xl text-cream">Discord Publisher</h1>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="hidden sm:flex items-center gap-2 bg-gray-700/50 px-3 py-1 rounded-full text-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
               <div className="relative">
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                 <div className="absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-75"></div>
               </div>
-              <span className="text-white font-mono">LIVE</span>
-              <span className="text-gray-300">{format(currentTime, 'HH:mm:ss')}</span>
-              <span className="text-gray-400 ml-1">{format(currentTime, 'EEEE')}</span>
+              <span className="text-accent font-semibold">LIVE</span>
+              <span className="text-muted-foreground font-mono">{format(currentTime, 'HH:mm:ss')}</span>
             </div>
             <Dialog open={logsOpen} onOpenChange={setLogsOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" onClick={fetchLogs} className="text-gray-300 border-gray-600 hover:bg-gray-700">
-                  <Eye size={16} className="mr-2" /> View Logs
+                <Button variant="outline" size="sm" onClick={fetchLogs} className="border-border text-muted-foreground hover:text-accent">
+                  <Eye size={16} className="mr-1" /> Logs
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
@@ -256,28 +251,45 @@ const PostToDiscord = () => {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="ghost" onClick={handleLogout} className="text-gray-300 hover:text-white">
-              <LogOut size={16} className="mr-2" /> Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-accent">
+              <LogOut size={16} className="mr-1" /> Logout
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
-        <Card>
-          <CardHeader><CardTitle className="text-2xl font-display text-white">New Post</CardTitle></CardHeader>
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        <Card className="bg-card border-border shadow-md">
+          <CardHeader>
+            <CardTitle className="text-2xl font-display text-cream">Create a Post</CardTitle>
+            <p className="text-muted-foreground text-sm">Send updates, images, or audio to your Discord channels</p>
+          </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="title" className="text-gray-300">Title</Label>
-                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required placeholder="Enter title" className="bg-gray-800 border-gray-700 text-white" />
+                <Label htmlFor="title" className="text-foreground">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  required
+                  placeholder="Enter title"
+                  className="bg-background border-border text-foreground"
+                />
               </div>
               <div>
-                <Label htmlFor="content" className="text-gray-300">Content</Label>
-                <Textarea id="content" value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="Write your announcement or description..." className="bg-gray-800 border-gray-700 text-white resize-none" />
+                <Label htmlFor="content" className="text-foreground">Content</Label>
+                <Textarea
+                  id="content"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  rows={5}
+                  placeholder="Write your announcement or description..."
+                  className="bg-background border-border text-foreground resize-none"
+                />
               </div>
               <div>
-                <Label className="text-gray-300">Channels (select at least one)</Label>
+                <Label className="text-foreground">Channels (select at least one)</Label>
                 <div className="flex flex-wrap gap-4 mt-2">
                   {channels.map(ch => (
                     <div key={ch.id} className="flex items-center space-x-2">
@@ -288,41 +300,64 @@ const PostToDiscord = () => {
                           if (checked) setSelectedChannels(prev => [...prev, ch.id]);
                           else setSelectedChannels(prev => prev.filter(c => c !== ch.id));
                         }}
-                        className="border-gray-600"
+                        className="border-border"
                       />
-                      <Label htmlFor={`ch-${ch.id}`} className="text-sm text-gray-300">{ch.icon} {ch.label}</Label>
+                      <Label htmlFor={`ch-${ch.id}`} className="text-sm text-foreground">{ch.icon} {ch.label}</Label>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <Label htmlFor="images" className="text-gray-300">Images (multiple)</Label>
-                <Input id="images" type="file" accept="image/*" multiple onChange={handleImageChange} className="bg-gray-800 border-gray-700 text-white" />
+                <Label htmlFor="images" className="text-foreground">Images (multiple)</Label>
+                <Input
+                  id="images"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="bg-background border-border text-foreground"
+                />
                 <div className="flex flex-wrap gap-2 mt-2">
                   {imagePreviews.map((url, idx) => (
                     <div key={idx} className="relative group">
-                      <img src={url} alt="preview" className="h-20 w-auto rounded border border-accent/20" />
+                      <img src={url} alt="preview" className="h-16 w-auto rounded border border-accent/30" />
                       <button
                         type="button"
                         onClick={() => removeImage(idx)}
-                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                        className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={10} />
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <Label htmlFor="audio" className="text-gray-300">Audio (optional)</Label>
-                <Input id="audio" type="file" accept="audio/*" onChange={handleAudioChange} className="bg-gray-800 border-gray-700 text-white" />
+                <Label htmlFor="audio" className="text-foreground">Audio (optional)</Label>
+                <Input
+                  id="audio"
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioChange}
+                  className="bg-background border-border text-foreground"
+                />
               </div>
               <div>
-                <Label htmlFor="schedule" className="text-gray-300">Schedule (optional)</Label>
-                <Input id="schedule" type="datetime-local" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} className="bg-gray-800 border-gray-700 text-white" />
-                <p className="text-xs text-gray-400 mt-1">Leave empty to post immediately.</p>
+                <Label htmlFor="schedule" className="text-foreground">Schedule (optional)</Label>
+                <Input
+                  id="schedule"
+                  type="datetime-local"
+                  value={scheduledDate}
+                  onChange={e => setScheduledDate(e.target.value)}
+                  className="bg-background border-border text-foreground"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Leave empty to post immediately.</p>
               </div>
-              <Button type="submit" disabled={submitting} className="w-full bg-gold text-black hover:bg-gold/90">
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+              >
                 {submitting ? <Loader2 className="animate-spin mr-2" /> : null}
                 {scheduledDate ? 'Schedule Post' : 'Post to Discord'}
               </Button>
