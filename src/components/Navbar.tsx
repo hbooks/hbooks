@@ -1,3 +1,4 @@
+// src/components/Navbar.tsx
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogIn, X as CloseIcon } from 'lucide-react';
@@ -40,17 +41,24 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-secondary sticky top-0 z-50 shadow-lg">
+      <nav className="bg-secondary/80 backdrop-blur-sm sticky top-0 z-50 border-b border-border/30">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          {/* Logo - simple link */}
-          <Link to="/" className="font-display text-2xl font-bold tracking-widest text-accent select-none">
-            hpbooks
+          {/* Logo with image */}
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src="/assets/favicon/web-app-manifest-192x192.png"
+              alt="Hbooks"
+              className="w-8 h-8 rounded-full border border-accent/30"
+            />
+            <span className="font-display text-2xl font-bold tracking-widest text-accent select-none">
+              hpbooks
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <ul className="hidden md:flex items-center gap-6">
+          {/* Desktop Navigation – with CSS anchor positioning */}
+          <ul className="hidden md:flex items-center gap-6 relative nav-links">
             {links.map(link => (
-              <li key={link.to}>
+              <li key={link.to} className="nav-item">
                 <Link
                   to={link.to}
                   className={`text-sm font-medium transition-colors hover:text-accent ${
@@ -68,7 +76,7 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            {/* Login Button (desktop) */}
+            {/* Login Button (desktop) – separate, not part of anchor effect */}
             <li>
               <button
                 onClick={() => setIsLoginModalOpen(true)}
@@ -128,7 +136,69 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Login Modal */}
+      {/* CSS for anchor positioning effect */}
+      <style>{`
+        .nav-links {
+          position: relative;
+        }
+        .nav-links::before {
+          content: '';
+          position: absolute;
+          bottom: -4px;
+          left: 0;
+          width: 0;
+          height: 2px;
+          background: var(--accent, #B8A27A);
+          transition: width 0.3s ease;
+        }
+        /* Anchor positioning – pure CSS */
+        .nav-links .nav-item {
+          position: relative;
+        }
+        .nav-links .nav-item a {
+          display: inline-block;
+          padding: 0.25rem 0;
+        }
+        .nav-links .nav-item:first-child {
+          anchor-name: --first;
+        }
+        .nav-links .nav-item:last-child {
+          anchor-name: --last;
+        }
+        .nav-links::after {
+          content: '';
+          position: absolute;
+          bottom: -4px;
+          left: anchor(left);
+          right: anchor(right);
+          width: auto;
+          height: 2px;
+          background: var(--accent, #B8A27A);
+          transition: left 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1), right 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+          position-anchor: --active;
+          visibility: hidden;
+        }
+        .nav-links .nav-item:hover {
+          anchor-name: --active;
+        }
+        .nav-links .nav-item:hover ~ .nav-links::after,
+        .nav-links .nav-item:has(:hover) + .nav-links::after {
+          visibility: visible;
+        }
+        /* Fallback for when no hover */
+        .nav-links:has(:not(:hover))::after {
+          anchor-name: --first;
+          visibility: hidden;
+        }
+        /* Adjust for responsive */
+        @media (max-width: 768px) {
+          .nav-links::after {
+            display: none;
+          }
+        }
+      `}</style>
+
+      {/* Login Modal (unchanged) */}
       {isLoginModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"
@@ -149,16 +219,13 @@ const Navbar = () => {
               <div className="w-20 h-20 bg-accent/20 rounded-full mx-auto mb-6 flex items-center justify-center">
                 <LogIn size={36} className="text-accent" />
               </div>
-
               <h2 className="font-display text-3xl text-foreground mb-3">Coming Soon</h2>
               <p className="text-muted-foreground mb-6">
                 The Inner Circle login is under construction. While we build this space, your support helps bring it to life faster.
               </p>
-
               <p className="text-sm text-muted-foreground mb-8">
                 Every contribution fuels development, exclusive content, and a better experience for everyone.
               </p>
-
               <a
                 href="/support"
                 className="inline-block bg-accent hover:bg-accent/90 text-accent-foreground font-bold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -166,7 +233,6 @@ const Navbar = () => {
               >
                 Support the Project
               </a>
-
               <p className="text-xs text-muted-foreground mt-6">
                 Thank you for being part of the journey ❤️
               </p>
