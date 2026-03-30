@@ -66,7 +66,7 @@ const fallbackUpcoming: UpcomingBook[] = [
 const Library = () => {
   const [books, setBooks] = useState<Book[]>(fallbackBooks);
   const [upcoming, setUpcoming] = useState<UpcomingBook[]>(fallbackUpcoming);
-  const authorPhoto = '@/assets/Author-profilepicture.jpeg';
+  const authorPhoto = '/assets/Author-profilepicture.jpeg';
 
   const fetchData = async () => {
     // Fetch published books
