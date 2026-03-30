@@ -1,4 +1,3 @@
-// src/components/Navbar.tsx
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogIn, X as CloseIcon } from 'lucide-react';
