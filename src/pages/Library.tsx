@@ -145,8 +145,13 @@ const Library = () => {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 py-16 px-4">
-      <div className="container mx-auto max-w-5xl">
+    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 py-16 px-4 relative">
+      {/* Background image overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=2070&auto=format)' }}
+      />
+      <div className="relative z-10 container mx-auto max-w-5xl">
         {/* Header with author photo */}
         <div className="text-center mb-16">
           <img
@@ -233,7 +238,7 @@ const Library = () => {
             Join the Discord for exclusive sneak peeks, concept art, and behind-the-scenes notes.
           </p>
           <Button variant="hero" asChild>
-            <a href="https://discord.gg/zbaugS2B2" target="_blank" rel="noopener noreferrer">
+            <a href="https://discord.com/invite/ChpngtFpux" target="_blank" rel="noopener noreferrer">
               Join Discord
             </a>
           </Button>
