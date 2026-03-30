@@ -40,10 +40,10 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="nav-highlight">
+      <nav className="bg-secondary/80 backdrop-blur-sm sticky top-0 z-50 border-b border-border/30">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           {/* Logo with image */}
-          <Link to="/" className="flex items-center gap-2 z-10">
+          <Link to="/" className="flex items-center gap-2">
             <img
               src="/assets/favicon/web-app-manifest-192x192.png"
               alt="Hbooks"
@@ -54,10 +54,10 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation – uses anchor positioning */}
-          <ul className="hidden md:flex items-center gap-6">
+          {/* Desktop Navigation – with CSS anchor positioning */}
+          <ul className="hidden md:flex items-center gap-6 relative nav-links">
             {links.map(link => (
-              <li key={link.to}>
+              <li key={link.to} className="nav-item">
                 <Link
                   to={link.to}
                   className={`text-sm font-medium transition-colors hover:text-accent ${
@@ -88,7 +88,7 @@ const Navbar = () => {
           </ul>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center gap-3 md:hidden z-10">
+          <div className="flex items-center gap-3 md:hidden">
             <button
               onClick={() => setIsLoginModalOpen(true)}
               className="bg-accent text-accent-foreground p-2 rounded-md"
@@ -135,84 +135,63 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* CSS for anchor positioning effect – scoped to .nav-highlight */}
+      {/* CSS for anchor positioning effect */}
       <style>{`
-        .nav-highlight {
-          position: sticky;
-          top: 0;
-          z-index: 50;
-          background-color: rgba(18, 18, 18, 0.8);
-          backdrop-filter: blur(8px);
-          border-bottom: 1px solid rgba(184, 162, 122, 0.2);
-        }
-
-        .nav-highlight > .container {
+        .nav-links {
           position: relative;
         }
-
-        .nav-highlight ul {
+        .nav-links::before {
+          content: '';
+          position: absolute;
+          bottom: -4px;
+          left: 0;
+          width: 0;
+          height: 2px;
+          background: var(--accent, #B8A27A);
+          transition: width 0.3s ease;
+        }
+        /* Anchor positioning – pure CSS */
+        .nav-links .nav-item {
           position: relative;
-          margin: 0;
-          padding: 0;
-          list-style: none;
-          display: flex;
-          gap: 1.5rem;
         }
-
-        /* Anchor positioning setup */
-        .nav-highlight ul:has(:not(:hover)) {
-          anchor-name: --test;
-        }
-
-        .nav-highlight a {
+        .nav-links .nav-item a {
           display: inline-block;
-          padding: 0.5rem 0;
-          text-decoration: none;
-          color: inherit;
+          padding: 0.25rem 0;
         }
-
-        .nav-highlight a:hover {
-          anchor-name: --test;
+        .nav-links .nav-item:first-child {
+          anchor-name: --first;
         }
-
-        /* The sliding indicator (pseudo-element) */
-        .nav-highlight ul::after {
+        .nav-links .nav-item:last-child {
+          anchor-name: --last;
+        }
+        .nav-links::after {
           content: '';
           position: absolute;
           bottom: -4px;
           left: anchor(left);
           right: anchor(right);
+          width: auto;
           height: 2px;
           background: var(--accent, #B8A27A);
-          transition: 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-          position-anchor: --test;
+          transition: left 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1), right 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+          position-anchor: --active;
           visibility: hidden;
         }
-
-        .nav-highlight ul:has(a:hover)::after {
+        .nav-links .nav-item:hover {
+          anchor-name: --active;
+        }
+        .nav-links .nav-item:hover ~ .nav-links::after,
+        .nav-links .nav-item:has(:hover) + .nav-links::after {
           visibility: visible;
         }
-
-        /* Fallback for browsers that don't support anchor positioning */
-        @supports not (anchor-name: --test) {
-          .nav-highlight a {
-            position: relative;
-          }
-          .nav-highlight a::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--accent, #B8A27A);
-            transition: width 0.2s ease;
-          }
-          .nav-highlight a:hover::after,
-          .nav-highlight a.active::after {
-            width: 100%;
-          }
-          .nav-highlight ul::after {
+        /* Fallback for when no hover */
+        .nav-links:has(:not(:hover))::after {
+          anchor-name: --first;
+          visibility: hidden;
+        }
+        /* Adjust for responsive */
+        @media (max-width: 768px) {
+          .nav-links::after {
             display: none;
           }
         }
