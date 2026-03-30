@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom'; 
-import { User, BookOpen, Clock, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, getSignedUrl } from '@/lib/supabase';
 import gildedCageCover from '@/assets/gilded-cage-cover.png';
@@ -33,7 +33,8 @@ const fallbackBooks: Book[] = [
     id: '1',
     title: 'The Gilded Cage',
     cover_image: gildedCageCover,
-    description: 'Remy Sot has spent four years at university chasing two dreams: making his parents proud, and winning the girl he loves. But when graduation brings rejection instead of romance, he\'s forced to confront a lifetime of emotional miscalculation.',
+    description:
+      'Remy Sot has spent four years at university chasing two dreams: making his parents proud, and winning the girl he loves. But when graduation brings rejection instead of romance, he\'s forced to confront a lifetime of emotional miscalculation.',
     ubl: 'https://books2read.com/u/mgQwZK',
     series: 'Lovely Strangers, Book 1',
     published: true,
@@ -46,7 +47,8 @@ const fallbackUpcoming: UpcomingBook[] = [
     id: '1',
     title: 'Lovely Strangers, Volume 2',
     cover_image: gildedCageCover,
-    description: 'The story continues. Deeper connections, darker secrets, and the consequences of choices made in the heat of youth. Volume 2 picks up where The Gilded Cage left off.',
+    description:
+      'The story continues. Deeper connections, darker secrets, and the consequences of choices made in the heat of youth. Volume 2 picks up where The Gilded Cage left off.',
     estimated_date: '2–4 weeks',
     created_at: '',
   },
@@ -54,7 +56,8 @@ const fallbackUpcoming: UpcomingBook[] = [
     id: '2',
     title: 'TRAPPED (Working Title)',
     cover_image: trappedCover,
-    description: 'Something new is taking shape. Darker? Maybe. More intense? Definitely. The bones are there, and the excitement about where this one is headed is undeniable.',
+    description:
+      'Something new is taking shape. Darker? Maybe. More intense? Definitely. The bones are there, and the excitement about where this one is headed is undeniable.',
     estimated_date: 'Sketching Ideas',
     created_at: '',
   },
@@ -63,6 +66,7 @@ const fallbackUpcoming: UpcomingBook[] = [
 const Library = () => {
   const [books, setBooks] = useState<Book[]>(fallbackBooks);
   const [upcoming, setUpcoming] = useState<UpcomingBook[]>(fallbackUpcoming);
+  const authorPhoto = '@/assets/Author-profilepicture.jpeg';
 
   const fetchData = async () => {
     // Fetch published books
@@ -81,7 +85,7 @@ const Library = () => {
       );
       setBooks(booksWithUrls);
     } else if (booksData && booksData.length === 0) {
-      // Keep fallback if no data (fallback already set)
+      // keep fallback
     } else {
       console.error(booksError);
     }
@@ -110,7 +114,6 @@ const Library = () => {
   useEffect(() => {
     fetchData();
 
-    // Subscribe to changes on both tables
     const subscription = supabase
       .channel('public:library')
       .on(
@@ -141,7 +144,7 @@ const Library = () => {
     return (item as any).cover_image;
   };
 
-    return (
+  return (
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 py-16 px-4">
       <div className="container mx-auto max-w-5xl">
         {/* Header with author photo */}
@@ -155,15 +158,17 @@ const Library = () => {
           <h1 className="font-display text-4xl md:text-5xl mt-2 text-cream">Published & Forthcoming</h1>
         </div>
 
-
         {/* Published Books */}
         <section className="mb-20">
           <h2 className="font-display text-3xl mb-8 flex items-center gap-3">
             <BookOpen size={28} className="text-accent" /> Published Books
           </h2>
           <div className="space-y-8">
-            {books.map(book => (
-              <div key={book.id} className="flex flex-col sm:flex-row gap-8 bg-card p-6 rounded-lg shadow-md border border-border">
+            {books.map((book) => (
+              <div
+                key={book.id}
+                className="flex flex-col sm:flex-row gap-8 bg-card p-6 rounded-lg shadow-md border border-border"
+              >
                 <img
                   src={getCoverSrc(book)}
                   alt={book.title}
@@ -172,7 +177,9 @@ const Library = () => {
                 <div className="flex-1">
                   <h3 className="font-display text-2xl mb-1">{book.title}</h3>
                   {book.series && <p className="text-accent italic text-sm mb-3">{book.series}</p>}
-                  <p className="leading-relaxed text-foreground opacity-80 mb-4">{book.description}</p>
+                  <p className="leading-relaxed text-foreground opacity-80 mb-4">
+                    {book.description}
+                  </p>
                   {book.ubl && (
                     <Button variant="hero" size="sm" asChild>
                       <a href={book.ubl} target="_blank" rel="noopener noreferrer">
@@ -192,8 +199,11 @@ const Library = () => {
             <Clock size={28} className="text-accent" /> Upcoming
           </h2>
           <div className="grid gap-8 md:grid-cols-2">
-            {upcoming.map(book => (
-              <div key={book.id} className="bg-secondary text-secondary-foreground p-6 rounded-lg shadow-md">
+            {upcoming.map((book) => (
+              <div
+                key={book.id}
+                className="bg-secondary text-secondary-foreground p-6 rounded-lg shadow-md"
+              >
                 <img
                   src={getCoverSrc(book)}
                   alt={book.title}
@@ -209,7 +219,7 @@ const Library = () => {
           </div>
         </section>
 
-        {/* Button to find stores – placed above Discord CTA */}
+        {/* Button to find stores */}
         <div className="text-center mb-8">
           <Button variant="heroOutline" asChild className="px-8 py-3 text-lg">
             <Link to="/stores">Where can I get the books?</Link>
