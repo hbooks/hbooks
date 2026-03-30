@@ -165,8 +165,8 @@ const Library = () => {
 
         {/* Published Books */}
         <section className="mb-20">
-          <h2 className="font-display text-3xl mb-8 flex items-center gap-3">
-            <BookOpen size={28} className="text-accent text-white" /> Published Books
+          <h2 className="font-display text-3xl mb-8 flex items-center gap-3 text-white">
+            <BookOpen size={28} className="text-accent" /> Published Books
           </h2>
           <div className="space-y-8">
             {books.map((book) => (
@@ -200,8 +200,8 @@ const Library = () => {
 
         {/* Upcoming Books */}
         <section className="mb-16">
-          <h2 className="font-display text-3xl mb-8 flex items-center gap-3">
-            <Clock size={28} className="text-accent text-white" /> Upcoming
+          <h2 className="font-display text-3xl mb-8 flex items-center gap-3 text-white">
+            <Clock size={28} className="text-accent" /> Upcoming
           </h2>
           <div className="grid gap-8 md:grid-cols-2">
             {upcoming.map((book) => (
