@@ -21,6 +21,14 @@ const fallbackNews: NewsPost[] = [
 const News = () => {
   const [news, setNews] = useState<NewsPost[]>(fallbackNews);
   const [likes, setLikes] = useState<Record<string, number>>({});
+  
+   return (
+    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4 relative">
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=2070&auto=format)' }}
+      />
+      <div className="relative z-10 container mx-auto max-w-3xl">
 
   // Fetch initial data
   const fetchNews = async () => {
