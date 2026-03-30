@@ -141,17 +141,20 @@ const Library = () => {
     return (item as any).cover_image;
   };
 
-  return (
-    <main className="min-h-screen py-16 px-4">
+    return (
+    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 py-16 px-4">
       <div className="container mx-auto max-w-5xl">
-        {/* Header */}
+        {/* Header with author photo */}
         <div className="text-center mb-16">
-          <div className="w-20 h-20 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
-            <User size={36} className="text-accent" />
-          </div>
+          <img
+            src={authorPhoto}
+            alt="Raphael M. Mwaura"
+            className="w-20 h-20 rounded-full mx-auto mb-4 border-2 border-accent object-cover"
+          />
           <p className="text-muted-foreground italic">By Raphael M. Mwaura</p>
-          <h1 className="font-display text-4xl md:text-5xl mt-2">Published & Forthcoming</h1>
+          <h1 className="font-display text-4xl md:text-5xl mt-2 text-cream">Published & Forthcoming</h1>
         </div>
+
 
         {/* Published Books */}
         <section className="mb-20">
