@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Star, Send, X } from 'lucide-react';
+import { Star, Send, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
@@ -53,11 +53,16 @@ const Reviews = () => {
   };
 
   return (
-    <main className="min-h-screen py-16 px-4">
-      <div className="container mx-auto max-w-4xl">
+    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4 relative">
+      {/* Background image overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2070&auto=format)' }}
+      />
+      <div className="relative z-10 container mx-auto max-w-4xl">
         <h1 className="font-display text-4xl md:text-5xl text-center mb-12">Reader Reviews</h1>
 
-        {/* Approved Reviews - shown first */}
+        {/* Approved Reviews */}
         <section className="mb-16">
           <h2 className="font-display text-2xl mb-8 text-center">What Readers Are Saying</h2>
           {reviews.length === 0 ? (
@@ -67,6 +72,9 @@ const Reviews = () => {
               {reviews.map(r => (
                 <div key={r.id} className="bg-card p-6 rounded-lg shadow-md border border-border">
                   <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                      <User size={14} className="text-accent" />
+                    </div>
                     <span className="font-semibold">{r.reviewer_name}</span>
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
