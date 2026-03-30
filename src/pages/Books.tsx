@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import bookCover from '@/assets/gilded-cage-cover.png';
 
-// Extend Window for Sender's explicit API
 declare global {
   interface Window {
     senderForms?: {
@@ -62,8 +61,13 @@ const Books = () => {
   };
 
   return (
-    <main className="min-h-screen bg-secondary text-secondary-foreground">
-      <div className="container mx-auto px-4 py-16">
+    <main className="min-h-screen bg-secondary text-secondary-foreground relative">
+      {/* Background overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2070&auto=format)' }}
+      />
+      <div className="relative z-10 container mx-auto px-4 py-16">
         <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start max-w-5xl mx-auto">
           {/* Book Cover */}
           <div className="flex-shrink-0 animate-fade-in-up">
@@ -99,7 +103,6 @@ const Books = () => {
                 Buy from your favourite store
               </Button>
 
-              {/* Sign-up button with id for Sender popup */}
               <Button
                 id="signup-trigger"
                 variant="hero"
