@@ -46,7 +46,6 @@ const Contact = () => {
       return;
     }
 
-    // Auto‑reply email (unchanged)
     try {
       await fetch(
         'https://xwomtgvefbshvzgddnig.supabase.co/functions/v1/send-autoreply',
@@ -64,7 +63,6 @@ const Contact = () => {
     setSuccess(true);
     resetForm();
 
-    // Close modal after 2 seconds
     setTimeout(() => {
       setIsModalOpen(false);
       setSuccess(false);
@@ -77,8 +75,13 @@ const Contact = () => {
   };
 
   return (
-    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4">
-      <div className="container mx-auto max-w-xl">
+    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4 relative">
+      {/* Background image overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1516387938699-a93567ec168e?q=80&w=2071&auto=format)' }}
+      />
+      <div className="relative z-10 container mx-auto max-w-xl">
         <div className="text-center mb-12">
           <h1 className="font-display text-4xl md:text-5xl mb-4 text-cream">Let's Connect</h1>
           <p className="text-cream opacity-80">
@@ -87,7 +90,7 @@ const Contact = () => {
           <p className="text-accent font-semibold mt-2">inquiries@hpbooks.uk</p>
         </div>
 
-        {/* Social Icons – large & colourful */}
+        {/* Social Icons */}
         <div className="mb-16 text-center">
           <p className="text-cream opacity-60 text-sm mb-6">Follow me on</p>
           <div className="flex justify-center gap-8">
@@ -130,7 +133,6 @@ const Contact = () => {
             className="bg-card max-w-md w-full rounded-2xl shadow-2xl border border-accent/20 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
             <button
               onClick={closeModal}
               className="absolute top-4 right-4 text-muted-foreground hover:text-accent transition-colors"
@@ -140,7 +142,7 @@ const Contact = () => {
 
             <form onSubmit={handleSubmit} className="p-8 space-y-4">
               <h2 className="font-display text-xl text-center text-foreground">Send a Message</h2>
-              <div>                
+              <div>
                 <label className="block text-sm font-semibold text-black mb-1">Your Name</label>
                 <input
                   type="text"
