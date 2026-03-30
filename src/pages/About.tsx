@@ -1,7 +1,7 @@
 import { BookOpen } from 'lucide-react';
 
 const About = () => {
-  const authorPhoto = 'src/assets/Authorprofilepicture.png';
+  const authorPhoto = '/assets/Authorprofilepicture.png';
   const publisherLogo = '/assets/favicon/web-app-manifest-192x192.png';
 
   return (
