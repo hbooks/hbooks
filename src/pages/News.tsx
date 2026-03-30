@@ -21,16 +21,7 @@ const fallbackNews: NewsPost[] = [
 const News = () => {
   const [news, setNews] = useState<NewsPost[]>(fallbackNews);
   const [likes, setLikes] = useState<Record<string, number>>({});
-  
-   return (
-    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4 relative">
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
-        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=2070&auto=format)' }}
-      />
-      <div className="relative z-10 container mx-auto max-w-3xl">
 
-  // Fetch initial data
   const fetchNews = async () => {
     const { data, error } = await supabase
       .from('news_posts')
@@ -55,7 +46,6 @@ const News = () => {
     fetchNews();
     fetchLikes();
 
-    // Subscribe to news_posts table changes (INSERT, UPDATE, DELETE)
     const newsSubscription = supabase
       .channel('public:news_posts')
       .on(
@@ -68,7 +58,6 @@ const News = () => {
       )
       .subscribe();
 
-    // Subscribe to news_likes table changes
     const likesSubscription = supabase
       .channel('public:news_likes')
       .on(
@@ -88,24 +77,26 @@ const News = () => {
   }, []);
 
   const handleLike = async (title: string) => {
-    // Optimistic update
     setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) + 1 }));
 
     const { data, error } = await supabase.rpc('increment_like', { p_news_title: title });
 
     if (error) {
       console.error('Like error:', error);
-      // Revert optimistic update
       setLikes(prev => ({ ...prev, [title]: (prev[title] || 0) - 1 }));
     } else if (typeof data === 'number') {
-      // If the RPC returns the new count, we could update directly, but the subscription will also refresh
       setLikes(prev => ({ ...prev, [title]: data }));
     }
   };
 
   return (
-    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4">
-      <div className="container mx-auto max-w-3xl">
+    <main className="min-h-screen bg-secondary text-secondary-foreground py-16 px-4 relative">
+      {/* Background image overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 z-0"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=2070&auto=format)' }}
+      />
+      <div className="relative z-10 container mx-auto max-w-3xl">
         <h1 className="font-display text-4xl md:text-5xl text-center mb-12 text-cream gold-glow">
           News & Updates
         </h1>
