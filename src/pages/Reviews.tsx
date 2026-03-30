@@ -75,7 +75,7 @@ const Reviews = () => {
                     <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
                       <User size={14} className="text-accent" />
                     </div>
-                    <span className="font-semibold">{r.reviewer_name}</span>
+                    <span className="font-semibold text-black">{r.reviewer_name}</span>
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star key={i} size={14} className={i < r.rating ? 'star-filled fill-current' : 'star-empty'} />
@@ -178,10 +178,6 @@ const Reviews = () => {
         )}
       </div>
     </main>
-  );
-};
-
-export default Reviews;
   );
 };
 
