@@ -1,7 +1,5 @@
 # hb00ks – Author Website 
 
-Welcome to the official repository for **hb00ks**, the author website of **Raphael M. Mwaura**. This site showcases his debut novel *The Gilded Cage*, provides news and updates, and allows readers to connect, leave reviews, and support his work.
-
 ---
 
 ## ✨ Features
@@ -21,7 +19,7 @@ Welcome to the official repository for **hb00ks**, the author website of **Rapha
 ## 🛠️ Tech Stack
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui
-- **Backend & Database:** Supabase (PostgreSQL)
+- **Backend & Database:**  (PostgreSQL)
 - **Hosting:** Cloudflare Pages
 - **Icons:** Lucide React, Font Awesome
 - **Package Manager:** npm
