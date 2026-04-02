@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogIn, X as CloseIcon } from 'lucide-react';
 import { FaBook, FaPaypal } from 'react-icons/fa';
@@ -19,7 +19,8 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [supportTextIndex, setSupportTextIndex] = useState(0);
-  const [scrolled, setScrolled] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const location = useLocation();
 
   const supportOptions = [
@@ -36,13 +37,33 @@ const Navbar = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Scroll listener to change navbar appearance
+  // Auto‑hide on scroll
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+        // Scrolling down → hide
+        setVisible(false);
+      } else if (currentScrollY < lastScrollY.current) {
+        // Scrolling up → show
+        setVisible(true);
+      }
+      lastScrollY.current = currentScrollY;
     };
+
+    // Show navbar when mouse is near the top (0-100px)
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.clientY < 100) {
+        setVisible(true);
+      }
+    };
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   const currentSupport = supportOptions[supportTextIndex];
@@ -51,11 +72,10 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className={`sticky top-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-secondary/80 backdrop-blur-sm border-b border-border/30'
-            : 'bg-transparent backdrop-blur-none border-b border-transparent'
+        className={`fixed top-0 left-0 w-full z-50 transition-transform duration-300 ${
+          visible ? 'translate-y-0' : '-translate-y-full'
         }`}
+        style={{ background: 'transparent', backdropFilter: 'none' }}
       >
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           {/* Logo with image */}
