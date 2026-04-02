@@ -19,6 +19,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [supportTextIndex, setSupportTextIndex] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
   const supportOptions = [
@@ -35,12 +36,27 @@ const Navbar = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Scroll listener to change navbar appearance
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const currentSupport = supportOptions[supportTextIndex];
   const SupportIcon = currentSupport.icon;
 
   return (
     <>
-      <nav className="bg-secondary/80 backdrop-blur-sm sticky top-0 z-50 border-b border-border/30">
+      <nav
+        className={`sticky top-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'bg-secondary/80 backdrop-blur-sm border-b border-border/30'
+            : 'bg-transparent backdrop-blur-none border-b border-transparent'
+        }`}
+      >
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           {/* Logo with image */}
           <Link to="/" className="flex items-center gap-2">
