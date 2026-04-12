@@ -64,7 +64,7 @@ const Footer = () => (
         </a>
         <span>|</span>
         <a
-          href="https://exclusive.hpbooks.uk"
+          href="https://bookshop.hpbooks.uk"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-accent transition-colors"
