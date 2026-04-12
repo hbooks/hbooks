@@ -66,7 +66,7 @@ const Navbar = () => {
   const SupportIcon = currentSupport.icon;
 
   const goToShop = () => {
-    window.location.href = 'https://bookstore.hpbooks.uk';
+    window.location.href = 'https://bookshop.hpbooks.uk';
   };
 
   return (
