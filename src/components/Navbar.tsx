@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, X as CloseIcon } from 'lucide-react';
+import { Menu, X, ShoppingBag, X as CloseIcon } from 'lucide-react';
 import { FaBook, FaPaypal } from 'react-icons/fa';
 import { SiKofi } from 'react-icons/si';
 
@@ -17,7 +17,6 @@ const links = [
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [supportTextIndex, setSupportTextIndex] = useState(0);
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
@@ -42,16 +41,13 @@ const Navbar = () => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
-        // Scrolling down → hide
         setVisible(false);
       } else if (currentScrollY < lastScrollY.current) {
-        // Scrolling up → show
         setVisible(true);
       }
       lastScrollY.current = currentScrollY;
     };
 
-    // Show navbar when mouse is near the top (0-100px)
     const handleMouseMove = (e: MouseEvent) => {
       if (e.clientY < 100) {
         setVisible(true);
@@ -68,6 +64,10 @@ const Navbar = () => {
 
   const currentSupport = supportOptions[supportTextIndex];
   const SupportIcon = currentSupport.icon;
+
+  const goToShop = () => {
+    window.location.href = 'https://bookstore.hpbooks.uk';
+  };
 
   return (
     <>
@@ -111,14 +111,14 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            {/* Login Button (desktop) – separate, not part of anchor effect */}
+            {/* Shop Button */}
             <li>
               <button
-                onClick={() => setIsLoginModalOpen(true)}
+                onClick={goToShop}
                 className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90 px-4 py-2 rounded-md font-medium transition-colors"
               >
-                <LogIn size={18} />
-                <span>Log in</span>
+                <ShoppingBag size={18} />
+                <span>Shop</span>
               </button>
             </li>
           </ul>
@@ -126,11 +126,11 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-3 md:hidden">
             <button
-              onClick={() => setIsLoginModalOpen(true)}
+              onClick={goToShop}
               className="bg-accent text-accent-foreground p-2 rounded-md"
-              aria-label="Log in"
+              aria-label="Shop"
             >
-              <LogIn size={20} />
+              <ShoppingBag size={20} />
             </button>
             <button
               className="text-secondary-foreground"
@@ -171,7 +171,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* CSS for anchor positioning effect */}
+      {/* CSS for anchor positioning effect (unchanged) */}
       <style>{`
         .nav-links {
           position: relative;
@@ -186,7 +186,6 @@ const Navbar = () => {
           background: var(--accent, #B8A27A);
           transition: width 0.3s ease;
         }
-        /* Anchor positioning – pure CSS */
         .nav-links .nav-item {
           position: relative;
         }
@@ -220,61 +219,16 @@ const Navbar = () => {
         .nav-links .nav-item:has(:hover) + .nav-links::after {
           visibility: visible;
         }
-        /* Fallback for when no hover */
         .nav-links:has(:not(:hover))::after {
           anchor-name: --first;
           visibility: hidden;
         }
-        /* Adjust for responsive */
         @media (max-width: 768px) {
           .nav-links::after {
             display: none;
           }
         }
       `}</style>
-
-      {/* Login Modal (unchanged) */}
-      {isLoginModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"
-          onClick={() => setIsLoginModalOpen(false)}
-        >
-          <div
-            className="bg-card max-w-md w-full rounded-2xl shadow-2xl border border-accent/20 p-8 relative animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setIsLoginModalOpen(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-accent transition-colors"
-            >
-              <CloseIcon size={20} />
-            </button>
-
-            <div className="text-center">
-              <div className="w-20 h-20 bg-accent/20 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <LogIn size={36} className="text-accent" />
-              </div>
-              <h2 className="font-display text-3xl text-foreground mb-3">Coming Soon</h2>
-              <p className="text-muted-foreground mb-6">
-                The Inner Circle login is under construction. While we build this space, your support helps bring it to life faster.
-              </p>
-              <p className="text-sm text-muted-foreground mb-8">
-                Every contribution fuels development, exclusive content, and a better experience for everyone.
-              </p>
-              <a
-                href="/support"
-                className="inline-block bg-accent hover:bg-accent/90 text-accent-foreground font-bold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                onClick={() => setIsLoginModalOpen(false)}
-              >
-                Support the Project
-              </a>
-              <p className="text-xs text-muted-foreground mt-6">
-                Thank you for being part of the journey ❤️
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };
