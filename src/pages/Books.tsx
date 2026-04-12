@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Star, X } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import bookCover from '@/assets/gilded-cage-cover.png';
@@ -15,7 +15,6 @@ declare global {
 
 const Books = () => {
   const [praise, setPraise] = useState<{ reviewer_name: string; review_text: string; rating: number } | null>(null);
-  const [showBuyModal, setShowBuyModal] = useState(false);
 
   useEffect(() => {
     supabase
@@ -50,14 +49,8 @@ const Books = () => {
     }
   }, []);
 
-  const handleBuyClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setShowBuyModal(true);
-  };
-
-  const handleContinueToStore = () => {
-    window.open('https://books2read.com/u/mgQwZK', '_blank', 'noopener,noreferrer');
-    setShowBuyModal(false);
+  const goToShop = () => {
+    window.location.href = 'https://bookshop.hpbooks.uk/my-books';
   };
 
   return (
@@ -97,10 +90,10 @@ const Books = () => {
               <Button
                 variant="hero"
                 size="lg"
-                onClick={handleBuyClick}
+                onClick={goToShop}
                 className="text-lg px-10 py-6 flex-1 cursor-pointer"
               >
-                Buy from your favourite store
+                Buy the Book from Our Store
               </Button>
 
               <Button
@@ -133,44 +126,6 @@ const Books = () => {
           </div>
         </div>
       </div>
-
-      {/* Modal for Buy Button */}
-      {showBuyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-card max-w-md w-full rounded-2xl shadow-2xl border border-accent/20 overflow-hidden">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-display text-2xl text-accent">Leaving Our Site</h3>
-                <button
-                  onClick={() => setShowBuyModal(false)}
-                  className="text-muted-foreground hover:text-accent transition-colors"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              <p className="text-muted-foreground mb-6">
-                You're about to visit Books2Read, our trusted retailer partner. They offer multiple store options (Amazon, Kobo, Apple Books, etc.). Would you like to continue?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-end">
-                <Button
-                  variant="hero"
-                  onClick={() => setShowBuyModal(false)}
-                  className="border-border hover:bg-accent/10"
-                >
-                  Stay Here
-                </Button>
-                <Button
-                  variant="hero"
-                  onClick={handleContinueToStore}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                  Continue to Store
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 };
