@@ -9,7 +9,7 @@ import { Heart } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Optional Lenis smooth scroll (if installed)
+// Optional Lenis smooth scroll 
 let Lenis: any;
 if (typeof window !== 'undefined') {
   import('lenis').then((module) => {
@@ -124,7 +124,7 @@ const Index = () => {
                 <Link to="/books">Learn More</Link>
               </Button>
               <Button variant="heroOutline" size="lg" asChild>
-                <a href="https://books2read.com/u/mgQwZK" target="_blank" rel="noopener noreferrer">
+                <a href="https://bookshop.hpbooks.uk/my-books" target="_blank" rel="noopener noreferrer">
                   Buy the Book
                 </a>
               </Button>
